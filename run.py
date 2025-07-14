@@ -1,7 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
 from sklearn.metrics import r2_score
-from sklearn.model_selection import cross_val_predict
 import numpy as np
 from automl.data import Dataset
 from automl.automl import AutoML
@@ -19,11 +18,12 @@ def main(
     output_path: Path,
     seed: int,
     datadir: Path,
-    use_multifidelity: bool,
+    use_multifidelity: bool = False,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
     logger.info("Fitting AutoML")
+
     automl = AutoML(random_state=seed)
 
     if use_multifidelity:
@@ -53,11 +53,11 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--datadir", type=Path, default=DATADIR)
     parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--use-multifidelity", action="store_true",
+    parser.add_argument("--multifidelity", action="store_true",
                         help="Use multi-fidelity hyperparameter optimization")
 
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO)
 
     logger.info(f"Running task {args.task} with fold {args.fold}")
-    main(args.task, args.fold, args.output_path, args.seed, args.datadir, args.use_multifidelity)
+    main(args.task, args.fold, args.output_path, args.seed, args.datadir, args.multifidelity)

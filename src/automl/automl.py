@@ -10,7 +10,7 @@ from sklearn.ensemble import StackingRegressor
 from sklearn.linear_model import Ridge
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
-from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.metrics import r2_score
 
 class AutoML:
@@ -21,7 +21,6 @@ class AutoML:
         self.best_score_ = None
 
     def _build_preprocessor(self, X: pd.DataFrame) -> ColumnTransformer:
-        """Build preprocessing pipeline for numeric and categorical features."""
         numeric_features = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
         categorical_features = X.select_dtypes(include=['object', 'category']).columns.tolist()
 
@@ -43,7 +42,6 @@ class AutoML:
         return preprocessor
 
     def _build_model(self) -> StackingRegressor:
-        """Build stacking regressor with base models and a meta-model."""
         base_models = [
             ('ridge', Ridge(random_state=self.random_state)),
             ('knn', KNeighborsRegressor()),
@@ -60,8 +58,11 @@ class AutoML:
         return stacking_regressor
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
-        """Fit AutoML model with full dataset and hyperparameter tuning."""
-        logging.info("Starting AutoML fit procedure (full dataset)...")
+        """
+        Perform standard hyperparameter optimization using full dataset and 3-fold CV.
+        """
+        logging.info("Starting AutoML fit procedure...")
+
         preprocessor = self._build_preprocessor(X)
         model = self._build_model()
 
@@ -99,28 +100,27 @@ class AutoML:
         logging.info(f"Best parameters found: {search.best_params_}")
         logging.info(f"Best CV R² score: {self.best_score_:.4f}")
 
-    def fit_multifidelity(self, X: pd.DataFrame, y: pd.Series):
-        """Fit AutoML model with Multi-Fidelity Hyperparameter Optimization.
-
-        Uses smaller subsets and fewer CV folds to speed up search.
+    def fit_multifidelity(self, X: pd.DataFrame, y: pd.Series,
+                          sample_fraction: float = 0.5,
+                          cv_folds: int = 2):
         """
-        logging.info("Starting AutoML fit procedure with Multi-Fidelity HPO...")
-        preprocessor = self._build_preprocessor(X)
+        Multi-Fidelity Hyperparameter Optimization:
+        Uses a smaller subset of data and fewer CV folds to reduce computation.
+        """
+        logging.info("Starting Multi-Fidelity AutoML fit procedure...")
+
+        # Subsample data for faster tuning
+        X_sub, _, y_sub, _ = train_test_split(
+            X, y, train_size=sample_fraction, random_state=self.random_state, stratify=None
+        )
+
+        preprocessor = self._build_preprocessor(X_sub)
         model = self._build_model()
 
         self.pipeline = Pipeline([
             ('preprocessor', preprocessor),
             ('regressor', model)
         ])
-
-        # Use only 50% of the data randomly for faster fitting
-        n_samples = len(X)
-        subset_size = max(int(n_samples * 0.5), 100)  # at least 100 samples
-
-        np.random.seed(self.random_state)
-        indices = np.random.choice(n_samples, subset_size, replace=False)
-        X_subset = X.iloc[indices]
-        y_subset = y.iloc[indices]
 
         param_distributions = {
             'regressor__final_estimator__alpha': [0.1, 1.0, 10.0],
@@ -136,15 +136,15 @@ class AutoML:
         search = RandomizedSearchCV(
             self.pipeline,
             param_distributions=param_distributions,
-            n_iter=3,  # fewer iterations for speed
-            cv=2,      # fewer folds for speed
+            n_iter=3,
+            cv=cv_folds,
             scoring='r2',
             n_jobs=-1,
             random_state=self.random_state,
             verbose=2
         )
 
-        search.fit(X_subset, y_subset)
+        search.fit(X_sub, y_sub)
         self.best_model = search.best_estimator_
         self.best_score_ = search.best_score_
 
@@ -152,19 +152,16 @@ class AutoML:
         logging.info(f"Best CV R² score (Multi-Fidelity): {self.best_score_:.4f}")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-        """Make predictions using the best found model."""
         if self.best_model is None:
             raise ValueError("Model has not been trained yet.")
         return self.best_model.predict(X)
 
     def save(self, filepath: str = 'automl_model.joblib'):
-        """Save the trained model to disk."""
         if self.best_model is None:
             raise ValueError("No model to save. Train the model first.")
         joblib.dump(self.best_model, filepath)
         logging.info(f"Model saved to {filepath}")
 
     def load(self, filepath: str = 'automl_model.joblib'):
-        """Load a trained model from disk."""
         self.best_model = joblib.load(filepath)
         logging.info(f"Model loaded from {filepath}")
