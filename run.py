@@ -18,13 +18,17 @@ def main(
     output_path: Path,
     seed: int,
     datadir: Path,
+    hpo_fraction: float,
+    hpo_cv: int,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
     logger.info("Fitting AutoML")
 
     automl = AutoML(random_state=seed)
-    automl.fit(dataset.X_train, dataset.y_train)
+    automl.fit(dataset.X_train, dataset.y_train,
+               hpo_data_fraction=hpo_fraction,
+               hpo_cv_folds=hpo_cv)
     test_preds = automl.predict(dataset.X_test)
 
     logger.info("Writing predictions to disk")
@@ -45,10 +49,15 @@ if __name__ == "__main__":
     parser.add_argument("--fold", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--datadir", type=Path, default=DATADIR)
+    parser.add_argument("--hpo-fraction", type=float, default=0.3,
+                        help="Fraction of training data used for hyperparameter optimization")
+    parser.add_argument("--hpo-cv", type=int, default=3,
+                        help="Number of CV folds used in hyperparameter optimization")
     parser.add_argument("--quiet", action="store_true")
 
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO)
 
     logger.info(f"Running task {args.task} with fold {args.fold}")
-    main(args.task, args.fold, args.output_path, args.seed, args.datadir)
+    main(args.task, args.fold, args.output_path, args.seed, args.datadir,
+         args.hpo_fraction, args.hpo_cv)
