@@ -1,17 +1,16 @@
 import logging
 import joblib
-import time
-import psutil
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.ensemble import StackingRegressor
-from sklearn.linear_model import Ridge
+from sklearn.feature_selection import SelectFromModel
+from sklearn.linear_model import Ridge, Lasso
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
+from sklearn.ensemble import StackingRegressor
 from sklearn.model_selection import RandomizedSearchCV
 
 class AutoML:
@@ -42,6 +41,13 @@ class AutoML:
 
         return preprocessor
 
+    def _build_feature_selector(self) -> SelectFromModel:
+        # Using Ridge with alpha=1 for embedded feature selection
+        selector = SelectFromModel(
+            Ridge(alpha=1.0, random_state=self.random_state)
+        )
+        return selector
+
     def _build_model(self) -> StackingRegressor:
         base_models = [
             ('ridge', Ridge(random_state=self.random_state)),
@@ -52,19 +58,23 @@ class AutoML:
         stacking_regressor = StackingRegressor(
             estimators=base_models,
             final_estimator=meta_model,
-            cv=5,
+            cv=3,
             n_jobs=-1,
             passthrough=True
         )
         return stacking_regressor
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
-        logging.info("Starting AutoML fit procedure...")
+        logging.info("Starting AutoML fit procedure with feature selection...")
+
         preprocessor = self._build_preprocessor(X)
+        feature_selector = self._build_feature_selector()
         model = self._build_model()
 
+        # Full pipeline: preprocessing -> feature selection -> stacking regressor
         self.pipeline = Pipeline([
             ('preprocessor', preprocessor),
+            ('feature_selection', feature_selector),
             ('regressor', model)
         ])
 
@@ -77,6 +87,7 @@ class AutoML:
                     ('xgb', XGBRegressor(objective='reg:squarederror', n_estimators=100, random_state=self.random_state, verbosity=0))
                 ],
             ],
+            'feature_selection__threshold': ['mean', 'median', None],  # threshold for feature importance to keep
         }
 
         search = RandomizedSearchCV(
@@ -90,20 +101,7 @@ class AutoML:
             verbose=2
         )
 
-        start_time = time.time()
-        process = psutil.Process()
-        mem_before = process.memory_info().rss / (1024 ** 2)  # MB
-
         search.fit(X, y)
-
-        mem_after = process.memory_info().rss / (1024 ** 2)  # MB
-        end_time = time.time()
-        elapsed = end_time - start_time
-        mem_used = mem_after - mem_before
-
-        logging.info(f"Training time: {elapsed:.2f} seconds")
-        logging.info(f"Memory usage change during training: {mem_used:.2f} MB")
-
         self.best_model = search.best_estimator_
         self.best_score_ = search.best_score_
 
@@ -113,22 +111,7 @@ class AutoML:
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         if self.best_model is None:
             raise ValueError("Model has not been trained yet.")
-
-        start_time = time.time()
-        process = psutil.Process()
-        mem_before = process.memory_info().rss / (1024 ** 2)  # MB
-
-        preds = self.best_model.predict(X)
-
-        mem_after = process.memory_info().rss / (1024 ** 2)  # MB
-        end_time = time.time()
-        elapsed = end_time - start_time
-        mem_used = mem_after - mem_before
-
-        logging.info(f"Prediction time: {elapsed:.2f} seconds")
-        logging.info(f"Memory usage change during prediction: {mem_used:.2f} MB")
-
-        return preds
+        return self.best_model.predict(X)
 
     def save(self, filepath: str = 'automl_model.joblib'):
         if self.best_model is None:

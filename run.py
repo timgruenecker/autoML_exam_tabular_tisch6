@@ -21,7 +21,7 @@ def main(
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
-    logger.info("Fitting AutoML")
+    logger.info("Fitting AutoML with feature selection")
 
     automl = AutoML(random_state=seed)
     automl.fit(dataset.X_train, dataset.y_train)
@@ -33,7 +33,7 @@ def main(
 
     if dataset.y_test is not None:
         r2_test = r2_score(dataset.y_test, test_preds)
-        logger.info(f"R^2 on test set: {r2_test}")
+        logger.info(f"R^2 on test set: {r2_test:.4f}")
     else:
         logger.info(f"No test labels available for task '{task}'")
 
