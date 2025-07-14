@@ -6,14 +6,11 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.feature_selection import SelectKBest, f_regression
 from sklearn.ensemble import StackingRegressor
 from sklearn.linear_model import Ridge
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
-from sklearn.experimental import enable_halving_search_cv  # noqa
-from sklearn.model_selection import HalvingRandomSearchCV
-from sklearn.metrics import r2_score
+from sklearn.model_selection import RandomizedSearchCV
 
 class AutoML:
     def __init__(self, random_state=42):
@@ -60,37 +57,36 @@ class AutoML:
         return stacking_regressor
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
-        logging.info("Starting AutoML fit procedure with resource-aware hyperparameter search...")
-
+        logging.info("Starting AutoML fit procedure...")
         preprocessor = self._build_preprocessor(X)
-        feature_selector = SelectKBest(score_func=f_regression)
         model = self._build_model()
 
         self.pipeline = Pipeline([
             ('preprocessor', preprocessor),
-            ('feature_selection', feature_selector),
             ('regressor', model)
         ])
 
         param_distributions = {
-            'feature_selection__k': [5, 10, 15, 'all'],
             'regressor__final_estimator__alpha': [0.1, 1.0, 10.0],
             'regressor__estimators': [
                 [
                     ('ridge', Ridge(alpha=1.0, random_state=self.random_state)),
                     ('knn', KNeighborsRegressor(n_neighbors=5)),
-                    ('xgb', XGBRegressor(objective='reg:squarederror', n_estimators=100,
-                                        random_state=self.random_state, verbosity=0))
+                    ('xgb', XGBRegressor(
+                        objective='reg:squarederror',
+                        n_estimators=100,
+                        random_state=self.random_state,
+                        verbosity=0
+                    ))
                 ],
+                # Add more model combinations if desired
             ],
         }
 
-        search = HalvingRandomSearchCV(
+        search = RandomizedSearchCV(
             self.pipeline,
             param_distributions=param_distributions,
-            factor=3,
-            resource='n_samples',
-            max_resources=min(10000, X.shape[0]),
+            n_iter=5,
             cv=3,
             scoring='r2',
             n_jobs=-1,
@@ -99,7 +95,6 @@ class AutoML:
         )
 
         search.fit(X, y)
-
         self.best_model = search.best_estimator_
         self.best_score_ = search.best_score_
 
