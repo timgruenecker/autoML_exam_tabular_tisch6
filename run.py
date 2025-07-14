@@ -18,20 +18,13 @@ def main(
     output_path: Path,
     seed: int,
     datadir: Path,
-    use_multifidelity: bool = False,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
 
     logger.info("Fitting AutoML")
 
     automl = AutoML(random_state=seed)
-
-    if use_multifidelity:
-        logger.info("Using Multi-Fidelity Hyperparameter Optimization")
-        automl.fit_multifidelity(dataset.X_train, dataset.y_train)
-    else:
-        automl.fit(dataset.X_train, dataset.y_train)
-
+    automl.fit(dataset.X_train, dataset.y_train)
     test_preds = automl.predict(dataset.X_test)
 
     logger.info("Writing predictions to disk")
@@ -53,11 +46,9 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--datadir", type=Path, default=DATADIR)
     parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--multifidelity", action="store_true",
-                        help="Use multi-fidelity hyperparameter optimization")
 
     args = parser.parse_args()
     logging.basicConfig(level=logging.WARNING if args.quiet else logging.INFO)
 
     logger.info(f"Running task {args.task} with fold {args.fold}")
-    main(args.task, args.fold, args.output_path, args.seed, args.datadir, args.multifidelity)
+    main(args.task, args.fold, args.output_path, args.seed, args.datadir)

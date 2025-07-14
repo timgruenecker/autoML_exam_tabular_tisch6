@@ -1,5 +1,7 @@
 import logging
 import joblib
+import time
+import psutil
 import numpy as np
 import pandas as pd
 from sklearn.pipeline import Pipeline
@@ -10,8 +12,7 @@ from sklearn.ensemble import StackingRegressor
 from sklearn.linear_model import Ridge
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
-from sklearn.model_selection import RandomizedSearchCV, train_test_split
-from sklearn.metrics import r2_score
+from sklearn.model_selection import RandomizedSearchCV
 
 class AutoML:
     def __init__(self, random_state=42):
@@ -58,11 +59,7 @@ class AutoML:
         return stacking_regressor
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
-        """
-        Perform standard hyperparameter optimization using full dataset and 3-fold CV.
-        """
         logging.info("Starting AutoML fit procedure...")
-
         preprocessor = self._build_preprocessor(X)
         model = self._build_model()
 
@@ -93,68 +90,45 @@ class AutoML:
             verbose=2
         )
 
+        start_time = time.time()
+        process = psutil.Process()
+        mem_before = process.memory_info().rss / (1024 ** 2)  # MB
+
         search.fit(X, y)
+
+        mem_after = process.memory_info().rss / (1024 ** 2)  # MB
+        end_time = time.time()
+        elapsed = end_time - start_time
+        mem_used = mem_after - mem_before
+
+        logging.info(f"Training time: {elapsed:.2f} seconds")
+        logging.info(f"Memory usage change during training: {mem_used:.2f} MB")
+
         self.best_model = search.best_estimator_
         self.best_score_ = search.best_score_
 
         logging.info(f"Best parameters found: {search.best_params_}")
         logging.info(f"Best CV R² score: {self.best_score_:.4f}")
 
-    def fit_multifidelity(self, X: pd.DataFrame, y: pd.Series,
-                          sample_fraction: float = 0.5,
-                          cv_folds: int = 2):
-        """
-        Multi-Fidelity Hyperparameter Optimization:
-        Uses a smaller subset of data and fewer CV folds to reduce computation.
-        """
-        logging.info("Starting Multi-Fidelity AutoML fit procedure...")
-
-        # Subsample data for faster tuning
-        X_sub, _, y_sub, _ = train_test_split(
-            X, y, train_size=sample_fraction, random_state=self.random_state, stratify=None
-        )
-
-        preprocessor = self._build_preprocessor(X_sub)
-        model = self._build_model()
-
-        self.pipeline = Pipeline([
-            ('preprocessor', preprocessor),
-            ('regressor', model)
-        ])
-
-        param_distributions = {
-            'regressor__final_estimator__alpha': [0.1, 1.0, 10.0],
-            'regressor__estimators': [
-                [
-                    ('ridge', Ridge(alpha=1.0, random_state=self.random_state)),
-                    ('knn', KNeighborsRegressor(n_neighbors=3)),
-                    ('xgb', XGBRegressor(objective='reg:squarederror', n_estimators=50, random_state=self.random_state, verbosity=0))
-                ],
-            ],
-        }
-
-        search = RandomizedSearchCV(
-            self.pipeline,
-            param_distributions=param_distributions,
-            n_iter=3,
-            cv=cv_folds,
-            scoring='r2',
-            n_jobs=-1,
-            random_state=self.random_state,
-            verbose=2
-        )
-
-        search.fit(X_sub, y_sub)
-        self.best_model = search.best_estimator_
-        self.best_score_ = search.best_score_
-
-        logging.info(f"Best parameters found (Multi-Fidelity): {search.best_params_}")
-        logging.info(f"Best CV R² score (Multi-Fidelity): {self.best_score_:.4f}")
-
     def predict(self, X: pd.DataFrame) -> np.ndarray:
         if self.best_model is None:
             raise ValueError("Model has not been trained yet.")
-        return self.best_model.predict(X)
+
+        start_time = time.time()
+        process = psutil.Process()
+        mem_before = process.memory_info().rss / (1024 ** 2)  # MB
+
+        preds = self.best_model.predict(X)
+
+        mem_after = process.memory_info().rss / (1024 ** 2)  # MB
+        end_time = time.time()
+        elapsed = end_time - start_time
+        mem_used = mem_after - mem_before
+
+        logging.info(f"Prediction time: {elapsed:.2f} seconds")
+        logging.info(f"Memory usage change during prediction: {mem_used:.2f} MB")
+
+        return preds
 
     def save(self, filepath: str = 'automl_model.joblib'):
         if self.best_model is None:
