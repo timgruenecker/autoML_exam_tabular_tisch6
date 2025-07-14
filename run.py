@@ -3,7 +3,7 @@ from pathlib import Path
 from sklearn.metrics import r2_score
 import numpy as np
 from automl.data import Dataset
-from automl.automl import AutoML
+from automl.model import AutoML
 import argparse
 import logging
 import json
@@ -25,7 +25,7 @@ def main(
 
     logger.info("Fitting AutoML")
 
-    automl = AutoML(seed=seed)
+    automl = AutoML(random_state=seed)
     automl.fit(dataset.X_train, dataset.y_train)
 
     test_preds = automl.predict(dataset.X_test)
