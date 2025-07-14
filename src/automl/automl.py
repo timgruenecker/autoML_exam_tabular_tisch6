@@ -1,93 +1,105 @@
+import logging
+from typing import Optional
 import numpy as np
-import pandas as pd
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.ensemble import RandomForestRegressor, VotingRegressor
-from sklearn.model_selection import RandomizedSearchCV
-import lightgbm as lgb
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import Ridge
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
+from sklearn.impute import SimpleImputer
+from xgboost import XGBRegressor
 
-class DateFeatureExtractor(BaseEstimator, TransformerMixin):
-    def __init__(self, date_col="date"):
-        self.date_col = date_col
+logger = logging.getLogger(__name__)
 
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X):
-        X = X.copy()
-        if self.date_col in X.columns:
-            X[self.date_col] = pd.to_datetime(X[self.date_col])
-            X["day_of_week"] = X[self.date_col].dt.dayofweek
-            X["month"] = X[self.date_col].dt.month
-            X = X.drop(columns=[self.date_col])
-        return X
 
 class AutoML:
-    def __init__(self, seed=42, n_iter=20, cv=5):
+    def __init__(self, seed: int = 42):
         self.seed = seed
-        self.n_iter = n_iter
-        self.cv = cv
-        self.best_pipeline = None
+        self.model: Optional[Pipeline] = None
 
-    def fit(self, X: pd.DataFrame, y: pd.Series):
-        # Feature engineering: Datumsextraktion
-        X = DateFeatureExtractor().fit_transform(X)
-
+    def fit(self, X, y):
         numeric_features = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
-        categorical_features = X.select_dtypes(include=["object", "category"]).columns.tolist()
+        categorical_features = X.select_dtypes(include=["object", "category", "bool"]).columns.tolist()
 
-        numeric_transformer = Pipeline([
+        numeric_transformer = Pipeline(steps=[
             ("imputer", SimpleImputer(strategy="mean")),
             ("scaler", StandardScaler())
         ])
-
-        categorical_transformer = Pipeline([
-            ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore"))
+        categorical_transformer = Pipeline(steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
         ])
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ("num", numeric_transformer, numeric_features),
+                ("cat", categorical_transformer, categorical_features)
+            ]
+        )
 
-        preprocessor = ColumnTransformer([
-            ("num", numeric_transformer, numeric_features),
-            ("cat", categorical_transformer, categorical_features)
-        ])
-
-        rf = RandomForestRegressor(random_state=self.seed)
-        lgbm = lgb.LGBMRegressor(random_state=self.seed)
-
-        ensemble = VotingRegressor([("rf", rf), ("lgbm", lgbm)])
-
-        pipeline = Pipeline([
-            ("preprocessor", preprocessor),
-            ("model", ensemble)
-        ])
-
-        param_distributions = {
-            "model__rf__n_estimators": [50, 100, 200],
-            "model__rf__max_depth": [None, 10, 20],
-            "model__lgbm__n_estimators": [50, 100, 200],
-            "model__lgbm__max_depth": [-1, 10, 20],
-            "model__lgbm__learning_rate": [0.01, 0.05, 0.1]
+        models_with_params = {
+            "RandomForest": (
+                RandomForestRegressor(random_state=self.seed),
+                {
+                    "model__n_estimators": [50, 100, 200],
+                    "model__max_depth": [None, 5, 10],
+                }
+            ),
+            "GradientBoosting": (
+                GradientBoostingRegressor(random_state=self.seed),
+                {
+                    "model__n_estimators": [100, 200],
+                    "model__learning_rate": [0.05, 0.1],
+                    "model__max_depth": [3, 5],
+                }
+            ),
+            "Ridge": (
+                Ridge(),
+                {
+                    "model__alpha": [0.1, 1.0, 10.0, 100.0],
+                }
+            ),
+            "XGBoost": (
+                XGBRegressor(random_state=self.seed, verbosity=0, n_jobs=-1),
+                {
+                    "model__n_estimators": [100, 200],
+                    "model__max_depth": [3, 5],
+                    "model__learning_rate": [0.05, 0.1, 0.2],
+                }
+            )
         }
 
-        search = RandomizedSearchCV(
-            pipeline,
-            param_distributions=param_distributions,
-            n_iter=self.n_iter,
-            cv=self.cv,
-            scoring="r2",
-            random_state=self.seed,
-            n_jobs=-1,
-            verbose=1
-        )
-        search.fit(X, y)
-        self.best_pipeline = search.best_estimator_
-        print(f"Best params: {search.best_params_}")
+        best_score = -np.inf
+        best_model = None
 
-    def predict(self, X: pd.DataFrame) -> np.ndarray:
-        if self.best_pipeline is None:
-            raise RuntimeError("You must fit the model before prediction.")
-        X = DateFeatureExtractor().fit_transform(X)
-        return self.best_pipeline.predict(X)
+        for name, (model, param_dist) in models_with_params.items():
+            logger.info(f"Optimizing {name}...")
+
+            pipeline = Pipeline([
+                ("preprocessing", preprocessor),
+                ("model", model)
+            ])
+
+            search = RandomizedSearchCV(
+                estimator=pipeline,
+                param_distributions=param_dist,
+                n_iter=9,
+                cv=3,
+                scoring="r2",
+                n_jobs=-1,
+                random_state=self.seed,
+                verbose=1
+            )
+            search.fit(X, y)
+            score = search.best_score_
+            logger.info(f"{name} best R²: {score:.4f}")
+
+            if score > best_score:
+                best_score = score
+                best_model = search.best_estimator_
+
+        self.model = best_model
+        logger.info("Best model selected and trained.")
+
+    def predict(self, X):
+        return self.model.predict(X)
