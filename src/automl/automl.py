@@ -1,58 +1,82 @@
-"""AutoML class for regression tasks.
-
-This module contains an example AutoML class that simply returns dummy predictions.
-You do not need to use this setup or sklearn and you can modify this however you like.
-"""
-from __future__ import annotations
-
-from sklearn.dummy import DummyRegressor
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import r2_score
-import pandas as pd
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.ensemble import RandomForestRegressor, VotingRegressor
+from sklearn.model_selection import RandomizedSearchCV
 import numpy as np
-import logging
-#test
-
-logger = logging.getLogger(__name__)
-
-METRICS = {"r2": r2_score}
+import pandas as pd
+import lightgbm as lgb
 
 class AutoML:
-
-    def __init__(
-        self,
-        seed: int,
-        metric: str = "r2",
-    ) -> None:
+    def __init__(self, seed=42, n_iter=20, cv=3):
         self.seed = seed
-        self.metric = METRICS[metric]
-        self._model: DummyRegressor | None = None
+        self.n_iter = n_iter
+        self.cv = cv
+        self.model = None
+        self.best_pipeline = None
 
-    def fit(
-        self,
-        X: pd.DataFrame,
-        y: pd.Series,
-    ) -> AutoML:
-        X_train, X_val, y_train, y_val = train_test_split(
-            X,
-            y,
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        # Spalten nach Typ trennen
+        numeric_features = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
+        categorical_features = X.select_dtypes(include=["object", "category"]).columns.tolist()
+
+        # Vorverarbeitung für numerische Daten
+        numeric_transformer = Pipeline([
+            ("imputer", SimpleImputer(strategy="mean")),
+            ("scaler", StandardScaler())
+        ])
+
+        # Vorverarbeitung für kategorische Daten
+        categorical_transformer = Pipeline([
+            ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore"))
+        ])
+
+        # Gesamte Vorverarbeitung
+        preprocessor = ColumnTransformer([
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features)
+        ])
+
+        # Modelle definieren
+        rf = RandomForestRegressor(random_state=self.seed)
+        lgbm = lgb.LGBMRegressor(random_state=self.seed)
+
+        # Ensemble der Modelle
+        ensemble = VotingRegressor([("rf", rf), ("lgbm", lgbm)])
+
+        # Pipeline
+        pipeline = Pipeline([
+            ("preprocessor", preprocessor),
+            ("model", ensemble)
+        ])
+
+        # Hyperparameter-Suchraum
+        param_distributions = {
+            "model__rf__n_estimators": [50, 100, 200],
+            "model__rf__max_depth": [None, 10, 20, 30],
+            "model__lgbm__n_estimators": [50, 100, 200],
+            "model__lgbm__max_depth": [-1, 10, 20, 30],
+            "model__lgbm__learning_rate": [0.01, 0.05, 0.1]
+        }
+
+        search = RandomizedSearchCV(
+            pipeline,
+            param_distributions=param_distributions,
+            n_iter=self.n_iter,
+            cv=self.cv,
+            scoring="r2",
             random_state=self.seed,
-            test_size=0.2,
+            n_jobs=-1,
+            verbose=1
         )
 
-        model = DummyRegressor()
-        model.fit(X_train, y_train)
-        self._model = model
-
-        val_preds = model.predict(X_val)
-        val_score = self.metric(y_val, val_preds)
-        logger.info(f"Validation score: {val_score:.4f}")
-
-        return self
-
+        search.fit(X, y)
+        self.best_pipeline = search.best_estimator_
+        print(f"Best parameters: {search.best_params_}")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-        if self._model is None:
-            raise ValueError("Model not fitted")
-
-        return self._model.predict(X)  # type: ignore
+        if self.best_pipeline is None:
+            raise RuntimeError("Fit the model first before predicting!")
+        return self.best_pipeline.predict(X)
