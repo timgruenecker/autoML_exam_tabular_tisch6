@@ -9,3 +9,5 @@ automl-tabular-env
 
 # allow predictions.npy to be uploaded and allow eval results to be saved here
 !data/exam_dataset/1/*.npy
+
+SS25_AutoML_Exam.pdf*
