@@ -1,119 +1,63 @@
-import logging
-import joblib
-import numpy as np
-import pandas as pd
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.ensemble import StackingRegressor
 from sklearn.linear_model import Ridge
-from sklearn.neighbors import KNeighborsRegressor
-from xgboost import XGBRegressor
-from sklearn.model_selection import RandomizedSearchCV
-import time
+from sklearn.ensemble import VotingRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
+from sklearn.model_selection import train_test_split
+import optuna
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class AutoML:
-    def __init__(self, random_state=42):
-        self.random_state = random_state
-        self.pipeline = None
-        self.best_model = None
-        self.best_score_ = None
-        self.training_time = None
-        self.memory_usage = None
+    def __init__(self, preprocessing):
+        self.preprocessing = preprocessing
+        self.models = {}
 
-    def _build_preprocessor(self, X: pd.DataFrame) -> ColumnTransformer:
-        numeric_features = X.select_dtypes(include=['int64', 'float64']).columns.tolist()
-        categorical_features = X.select_dtypes(include=['object', 'category']).columns.tolist()
+    def _build_models(self, X, y):
+        """Builds multiple models with tuned hyperparameters."""
 
-        numeric_transformer = Pipeline([
-            ('imputer', SimpleImputer(strategy='median')),
-            ('scaler', StandardScaler())
-        ])
+        ridge = Ridge(alpha=1.0)
 
-        categorical_transformer = Pipeline([
-            ('imputer', SimpleImputer(strategy='constant', fill_value='missing')),
-            ('onehot', OneHotEncoder(handle_unknown='ignore'))
-        ])
+        def objective_lgb(trial):
+            return LGBMRegressor(
+                n_estimators=trial.suggest_int("n_estimators", 50, 300),
+                max_depth=trial.suggest_int("max_depth", 3, 12),
+                learning_rate=trial.suggest_float("learning_rate", 0.01, 0.3),
+                subsample=trial.suggest_float("subsample", 0.6, 1.0),
+                colsample_bytree=trial.suggest_float("colsample_bytree", 0.6, 1.0),
+                random_state=42
+            )
 
-        return ColumnTransformer([
-            ('num', numeric_transformer, numeric_features),
-            ('cat', categorical_transformer, categorical_features)
-        ])
+        study_lgb = optuna.create_study(direction="maximize")
+        study_lgb.enqueue_trial({"n_estimators": 100, "max_depth": 6, "learning_rate": 0.1, "subsample": 0.8, "colsample_bytree": 0.8})
+        study_lgb.optimize(lambda trial: self._evaluate(objective_lgb(trial), X, y), n_trials=10)
 
-    def _build_model(self) -> StackingRegressor:
-        base_models = [
-            ('ridge', Ridge(random_state=self.random_state)),
-            ('knn', KNeighborsRegressor()),
-            ('xgb', XGBRegressor(objective='reg:squarederror', random_state=self.random_state, verbosity=0))
-        ]
-        meta_model = Ridge(random_state=self.random_state)
+        lgb_model = objective_lgb(study_lgb.best_trial)
 
-        return StackingRegressor(
-            estimators=base_models,
-            final_estimator=meta_model,
-            cv=5,
-            n_jobs=-1,
-            passthrough=True
-        )
+        cat_model = CatBoostRegressor(verbose=0, random_seed=42)
 
-    def fit(self, X: pd.DataFrame, y: pd.Series):
-        logging.info("Starting AutoML fit procedure...")
+        return {"ridge": ridge, "lightgbm": lgb_model, "catboost": cat_model}
 
-        start_time = time.time()
-        preprocessor = self._build_preprocessor(X)
-        model = self._build_model()
+    def _evaluate(self, model, X, y):
+        """Simple evaluation using holdout split for tuning."""
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+        model.fit(X_train, y_train)
+        return model.score(X_val, y_val)
 
-        self.pipeline = Pipeline([
-            ('preprocessor', preprocessor),
-            ('regressor', model)
-        ])
+    def fit(self, X, y):
+        logger.info("Fitting preprocessing...")
+        X_transformed = self.preprocessing.fit_transform(X)
+        logger.info("Fitting models...")
+        self.models = self._build_models(X_transformed, y)
 
-        param_distributions = {
-            'regressor__final_estimator__alpha': [0.1, 1.0, 10.0],
-        }
+        for name, model in self.models.items():
+            logger.info(f"Training model: {name}")
+            model.fit(X_transformed, y)
 
-        search = RandomizedSearchCV(
-            self.pipeline,
-            param_distributions=param_distributions,
-            n_iter=5,
-            cv=3,
-            scoring='r2',
-            n_jobs=-1,
-            random_state=self.random_state,
-            verbose=2
-        )
+        self.ensemble = VotingRegressor(estimators=[(k, m) for k, m in self.models.items()])
+        self.ensemble.fit(X_transformed, y)
 
-        search.fit(X, y)
-
-        self.training_time = time.time() - start_time
-        self.memory_usage = self._estimate_memory_usage()
-
-        self.best_model = search.best_estimator_
-        self.best_score_ = search.best_score_
-
-        logging.info(f"Best parameters found: {search.best_params_}")
-        logging.info(f"Best CV R² score: {self.best_score_:.4f}")
-        logging.info(f"Training time (s): {self.training_time:.2f}")
-        logging.info(f"Estimated memory usage (MB): {self.memory_usage:.2f}")
-
-    def _estimate_memory_usage(self) -> float:
-        import psutil
-        process = psutil.Process()
-        mem_bytes = process.memory_info().rss
-        return mem_bytes / (1024 * 1024)
-
-    def predict(self, X: pd.DataFrame) -> np.ndarray:
-        if self.best_model is None:
-            raise ValueError("Model has not been trained yet.")
-        return self.best_model.predict(X)
-
-    def save(self, filepath: str = 'automl_model.joblib'):
-        if self.best_model is None:
-            raise ValueError("No model to save. Train the model first.")
-        joblib.dump(self.best_model, filepath)
-        logging.info(f"Model saved to {filepath}")
-
-    def load(self, filepath: str = 'automl_model.joblib'):
-        self.best_model = joblib.load(filepath)
-        logging.info(f"Model loaded from {filepath}")
+    def predict(self, X):
+        X_transformed = self.preprocessing.transform(X)
+        return self.ensemble.predict(X_transformed)
