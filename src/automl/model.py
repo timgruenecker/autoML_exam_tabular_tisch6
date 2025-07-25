@@ -20,32 +20,63 @@ class AutoML:
 
     def _build_models(self, X, y):
         """Builds multiple models with tuned hyperparameters."""
+        meta = self.preprocessing.meta_features_
+        self.logger.info(f"Meta-features used for HPO: {meta}")
 
+        # Ridge Regression: Baseline-Modell mit Default-Werten
         ridge = Ridge(alpha=1.0)
 
+        # Extract meta-features from Preprocessor
+        meta = self.preprocessing.meta_features_
+        logger.info(f"Meta-features extracted: {meta}")
+        n_samples = meta.get("n_samples", X.shape[0])
+        n_features = meta.get("n_features", X.shape[1])
+        cardinality = meta.get("mean_cardinality", 10)
+
+        # Dynamisch angepasste HPO-Suchräume basierend auf den Meta-Features
+        max_estimators = min(500, int(n_samples / 2))
+        max_depth_upper = min(16, int(cardinality + n_features / 2))
+
+        # Optuna-Objective für LightGBM
         def objective_lgb(trial):
+            n_features = meta["n_features"]
+            n_samples = meta["n_samples"]
+
+            max_estimators = 500 if n_samples > 5000 else 200
+            max_depth_upper = 12 if n_features > 50 else 6
+
             return LGBMRegressor(
-                n_estimators=trial.suggest_int("n_estimators", 50, 300),
-                max_depth=trial.suggest_int("max_depth", 3, 12),
+                n_estimators=trial.suggest_int("n_estimators", 50, max_estimators),
+                max_depth=trial.suggest_int("max_depth", 3, max_depth_upper),
                 learning_rate=trial.suggest_float("learning_rate", 0.01, 0.3),
                 subsample=trial.suggest_float("subsample", 0.6, 1.0),
                 colsample_bytree=trial.suggest_float("colsample_bytree", 0.6, 1.0),
-                random_state=42
+                random_state=self.seed,
             )
 
+        # Optuna-Studie konfigurieren
         study_lgb = optuna.create_study(direction="maximize")
-        study_lgb.enqueue_trial({"n_estimators": 100, "max_depth": 6, "learning_rate": 0.1, "subsample": 0.8, "colsample_bytree": 0.8})
+        study_lgb.enqueue_trial({
+            "n_estimators": min(100, max_estimators),
+            "max_depth": min(6, max_depth_upper),
+            "learning_rate": 0.1,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8
+        })
         study_lgb.optimize(lambda trial: self._evaluate(objective_lgb(trial), X, y), n_trials=10)
 
+        # Bestes LightGBM-Modell instanziieren
         lgb_model = objective_lgb(study_lgb.best_trial)
+        self.logger.info(f"Best LightGBM trial: {study_lgb.best_trial.params}")
 
-        cat_model = CatBoostRegressor(verbose=0, random_seed=42)
+        # CatBoost: ohne HPO (Default mit Random Seed)
+        cat_model = CatBoostRegressor(verbose=0, random_seed=self.seed)
 
         return {"ridge": ridge, "lightgbm": lgb_model, "catboost": cat_model}
 
     def _evaluate(self, model, X, y):
         """Simple evaluation using holdout split for tuning."""
-        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=self.seed)
         model.fit(X_train, y_train)
         return model.score(X_val, y_val)
 

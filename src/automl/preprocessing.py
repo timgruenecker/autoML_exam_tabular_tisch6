@@ -18,6 +18,24 @@ class Preprocessor(BaseEstimator, TransformerMixin):
         self.scale_numeric = scale_numeric
         self.pipeline = None
         self.feature_names = None
+        self.meta_features_ = None  # Store extracted meta-features
+
+    def extract_meta_features(self, X, y=None):
+        """Extracts dataset-level meta-features."""
+        meta_features = {
+            "n_samples": X.shape[0],
+            "n_features": X.shape[1],
+            "n_numeric": X.select_dtypes(include=["number"]).shape[1],
+            "n_categorical": X.select_dtypes(exclude=["number"]).shape[1],
+            "missing_values": X.isnull().sum().sum(),
+        }
+        if y is not None:
+            meta_features.update({
+                "y_mean": y.mean(),
+                "y_std": y.std(),
+                "y_skew": y.skew(),
+            })
+        self.meta_features_ = meta_features
 
     def fit(self, X: pd.DataFrame, y=None):
         # Separate numerical and categorical features
@@ -56,7 +74,8 @@ class Preprocessor(BaseEstimator, TransformerMixin):
     def transform(self, X: pd.DataFrame):
         return self.pipeline.transform(X)
 
-    def fit_transform(self, X: pd.DataFrame, y=None):
+    def fit_transform(self, X, y=None):
+        self.extract_meta_features(X, y)
         return self.fit(X).transform(X)
 
     def get_feature_names(self):
