@@ -6,6 +6,8 @@ from sklearn.model_selection import train_test_split
 import optuna
 import logging
 from src.automl.preprocessing import Preprocessor
+from sklearn.metrics import r2_score
+
 
 logger = logging.getLogger(__name__)
 
@@ -87,11 +89,16 @@ class AutoML:
         self.models = self._build_models(X_transformed, y)
 
         for name, model in self.models.items():
-            logger.info(f"Training model: {name}")
             model.fit(X_transformed, y)
+            preds = model.predict(X_transformed)
+            score = r2_score(y, preds)
+            logger.info(f"Model {name} R² on train: {score:.4f}")
 
         self.ensemble = VotingRegressor(estimators=[(k, m) for k, m in self.models.items()])
+        print("Ensembled models:", self.ensemble.estimators)
         self.ensemble.fit(X_transformed, y)
+        print("Final models:", list(self.models.keys()))
+
 
     def predict(self, X):
         X_transformed = self.preprocessing.transform(X)

@@ -7,6 +7,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
+from sklearn.decomposition import PCA
+
 
 
 class Preprocessor(BaseEstimator, TransformerMixin):
@@ -14,11 +16,11 @@ class Preprocessor(BaseEstimator, TransformerMixin):
     Preprocessor class to handle missing values, encoding of categorical features, and optional scaling.
     """
 
-    def __init__(self, scale_numeric: bool = True):
-        self.scale_numeric = scale_numeric
+    def __init__(self, use_pca: bool = False, n_components: float = 0.95):
+        self.use_pca = use_pca
+        self.n_components = n_components
         self.pipeline = None
-        self.feature_names = None
-        self.meta_features_ = None  # Store extracted meta-features
+        self.meta_features_ = None
 
     def extract_meta_features(self, X, y=None):
         """Extracts dataset-level meta-features."""
@@ -71,12 +73,42 @@ class Preprocessor(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self, X: pd.DataFrame):
+    def transform(self, X):
         return self.pipeline.transform(X)
 
-    def fit_transform(self, X, y=None):
-        self.extract_meta_features(X, y)
-        return self.fit(X).transform(X)
+    def fit_transform(self, X: pd.DataFrame):
+        self.meta_features_ = {
+            "n_samples": X.shape[0],
+            "n_features": X.shape[1],
+            "n_categorical": X.select_dtypes(include="category").shape[1],
+            "n_numerical": X.select_dtypes(include=["number"]).shape[1],
+        }
+
+        numeric_features = X.select_dtypes(include=["int64", "float64"]).columns.tolist()
+        categorical_features = X.select_dtypes(include=["object", "category"]).columns.tolist()
+
+        numeric_transformer = Pipeline(steps=[
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler())
+        ])
+
+        categorical_transformer = Pipeline(steps=[
+            ("imputer", SimpleImputer(strategy="most_frequent")),
+            ("onehot", OneHotEncoder(handle_unknown="ignore", sparse=False))
+        ])
+
+        preprocessor = ColumnTransformer(transformers=[
+            ("num", numeric_transformer, numeric_features),
+            ("cat", categorical_transformer, categorical_features),
+        ])
+
+        steps = [("preprocessor", preprocessor)]
+
+        if self.use_pca:
+            steps.append(("pca", PCA(n_components=self.n_components)))
+
+        self.pipeline = Pipeline(steps)
+        return self.pipeline.fit_transform(X)
 
     def get_feature_names(self):
         return self.feature_names

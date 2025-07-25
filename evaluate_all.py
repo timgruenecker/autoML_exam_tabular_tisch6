@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import argparse
-from src.automl.model import AutoML
 import pandas as pd
 from sklearn.metrics import r2_score
 from src.automl.model import AutoML
@@ -30,7 +29,12 @@ def main(tasks, folds, output_dir, seed=42):
             print(f"\n=== Evaluating task: {task}, fold: {fold} ===")
             X_train, y_train, X_test, y_test = load_data(task, fold)
 
-            automl = AutoML(seed=seed, preprocessing=Preprocessor())
+            preprocessor = Preprocessor(
+                use_pca=args.use_pca,
+                n_components=args.pca_components
+            )
+
+            automl = AutoML(preprocessing=preprocessor, seed=args.seed)
             automl.fit(X_train, y_train)
             y_pred = automl.predict(X_test)
 
@@ -63,6 +67,8 @@ if __name__ == "__main__":
     parser.add_argument("--folds", nargs="+", type=int, default=[1], help="List of folds to evaluate")
     parser.add_argument("--output-dir", default="out", help="Directory to save predictions and evaluation")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    parser.add_argument('--use-pca', action='store_true', help="Enable PCA in preprocessing")
+    parser.add_argument('--pca-components', type=float, default=0.95, help="Number of PCA components (variance ratio)")
     args = parser.parse_args()
 
     main(args.tasks, args.folds, args.output_dir, args.seed)
