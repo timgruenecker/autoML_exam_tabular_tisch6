@@ -5,14 +5,18 @@ from catboost import CatBoostRegressor
 from sklearn.model_selection import train_test_split
 import optuna
 import logging
+from src.automl.preprocessing import Preprocessor
 
 logger = logging.getLogger(__name__)
 
 
 class AutoML:
-    def __init__(self, preprocessing):
-        self.preprocessing = preprocessing
+    def __init__(self, preprocessing: Preprocessor = None, seed: int = 42):
+        self.seed = seed
+        self.preprocessing = preprocessing or Preprocessor()
         self.models = {}
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
 
     def _build_models(self, X, y):
         """Builds multiple models with tuned hyperparameters."""
