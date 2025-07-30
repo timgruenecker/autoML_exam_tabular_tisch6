@@ -1,40 +1,67 @@
 import argparse
-import numpy as np
-from pathlib import Path
-import logging
-
-from src.automl.data import Dataset
-from src.automl.preprocessing import build_preprocessing_pipeline
-from src.automl.model import AutoML
 import os
+import logging
+import numpy as np
+import pandas as pd
+from src.automl.model import AutoML
+from src.automl.preprocessing import Preprocessor
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def main(task, fold, output_path):
-    logger = logging.getLogger(__name__)
-    dataset = Dataset.load(Path("data"), task=task, fold=fold)
-    X_train, y_train = dataset.X_train, dataset.y_train
-    X_test = dataset.X_test
 
-    preprocessing = build_preprocessing_pipeline(X_train)
-    automl = AutoML(preprocessing=preprocessing)
+def load_fold_data(task_dir, fold):
+    fold_dir = os.path.join(task_dir, str(fold))
+    X_train = pd.read_parquet(os.path.join(fold_dir, "X_train.parquet"))
+    y_train = pd.read_parquet(os.path.join(fold_dir, "y_train.parquet")).squeeze()
+    X_test = pd.read_parquet(os.path.join(fold_dir, "X_test.parquet"))
+    return X_train, y_train, X_test
 
-    logger.info("Fitting AutoML model...")
+
+def detect_folds(task_dir):
+    """Returns list of fold indices (as int) if fold subdirectories exist"""
+    try:
+        fold_dirs = [
+            int(name) for name in os.listdir(task_dir)
+            if os.path.isdir(os.path.join(task_dir, name)) and name.isdigit()
+        ]
+        return sorted(fold_dirs)
+    except FileNotFoundError:
+        return []
+
+
+def main(task: str, fold: int, output_path: str):
+    task_path = os.path.join("data", task)
+    available_folds = detect_folds(task_path)
+
+    if not available_folds:
+        raise ValueError(f"No fold subdirectories found in {task_path}.")
+
+    if fold not in available_folds:
+        raise ValueError(f"Requested fold {fold}, but available folds are: {available_folds}")
+
+    logger.info(f"Using fold {fold} for task {task}")
+    X_train, y_train, X_test = load_fold_data(task_path, fold)
+
+    preprocessor = Preprocessor()
+    automl = AutoML(preprocessing=preprocessor, seed=42)
+
+    logger.info("Fitting AutoML...")
     automl.fit(X_train, y_train)
 
     logger.info("Generating predictions...")
     y_pred = automl.predict(X_test)
 
-    logger.info(f"Saving predictions to {output_path}")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    logger.info(f"Saving predictions to {output_path}")
     np.save(output_path, y_pred)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--task", type=str, required=True, help="Name of the task (e.g. bike_sharing_demand)")
-    parser.add_argument("--fold", type=int, default=1, help="Fold number to use")
-    parser.add_argument("--output-path", type=str, required=True, help="Where to save predictions (as .npy)")
-    args = parser.parse_args()
+    parser.add_argument("--task", type=str, required=True, help="Name of the dataset (subfolder in 'data/')")
+    parser.add_argument("--fold", type=int, required=True, help="Fold number (must exist as subfolder)")
+    parser.add_argument("--output-path", type=str, required=True, help="Path to save predictions (.npy)")
 
+    args = parser.parse_args()
     main(args.task, args.fold, args.output_path)

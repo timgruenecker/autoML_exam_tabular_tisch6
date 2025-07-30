@@ -2,11 +2,12 @@ from sklearn.linear_model import Ridge
 from sklearn.ensemble import VotingRegressor
 from lightgbm import LGBMRegressor
 from catboost import CatBoostRegressor
-from sklearn.model_selection import train_test_split
 import optuna
 import logging
 from src.automl.preprocessing import Preprocessor
 from sklearn.metrics import r2_score
+from sklearn.model_selection import cross_val_score, KFold
+
 
 
 logger = logging.getLogger(__name__)
@@ -77,10 +78,10 @@ class AutoML:
         return {"ridge": ridge, "lightgbm": lgb_model, "catboost": cat_model}
 
     def _evaluate(self, model, X, y):
-        """Simple evaluation using holdout split for tuning."""
-        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=self.seed)
-        model.fit(X_train, y_train)
-        return model.score(X_val, y_val)
+        """Evaluate model using KFold cross-validation and return mean R²."""
+        cv = KFold(n_splits=5, shuffle=True, random_state=self.seed)
+        scores = cross_val_score(model, X, y, cv=cv, scoring="r2", n_jobs=-1)
+        return scores.mean()
 
     def fit(self, X, y):
         logger.info("Fitting preprocessing...")
