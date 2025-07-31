@@ -4,7 +4,7 @@ import os
 import numpy as np
 import logging
 from sklearn.metrics import r2_score
-
+import glob
 from src.automl.model import AutoML
 from src.automl.preprocessing import Preprocessor
 from src.automl.utils import load_data, save_metadata
@@ -59,15 +59,45 @@ def evaluate_all_folds(task: str, folds: list[int], output_dir: str, seed: int =
     avg_r2 = np.mean(r2_scores)
     logger.info(f"\n✅ Average R² over {len(folds)} folds: {avg_r2:.4f}")
 
+def infer_folds(task: str):
+    """
+    Automatically infer all available folds for a given task by checking the data directory.
+
+    Args:
+        task (str): Task name (subfolder in /data)
+
+    Returns:
+        List of available fold indices (as integers), sorted ascending
+    """
+    path = os.path.join("data", task)
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"No such task directory: {path}")
+
+    folds = [
+        int(os.path.basename(f))
+        for f in glob.glob(os.path.join(path, "*"))
+        if os.path.isdir(f) and os.path.basename(f).isdigit()
+    ]
+
+    if not folds:
+        raise ValueError(f"No valid folds found for task '{task}' in {path}")
+
+    return sorted(folds)
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate AutoML across multiple folds.")
     parser.add_argument("--tasks", nargs="+", required=True, help="Dataset names (e.g. bike_sharing_demand)")
-    parser.add_argument("--folds", nargs="+", type=int, help="Fold indices (e.g. 1 2 3). Default: All 1–5", default=[1, 2, 3, 4, 5])
+    parser.add_argument("--folds", nargs="+", type=int,
+                        help="Fold indices (e.g. 1 2 3). If omitted, all available folds will be used.")
     parser.add_argument("--output-dir", type=str, default="out", help="Directory to save predictions")
     parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
 
     args = parser.parse_args()
 
     for task in args.tasks:
-        evaluate_all_folds(task, args.folds, args.output_dir, seed=args.seed)
+        folds = args.folds if args.folds else infer_folds(task)
+        logger.info(f"Detected folds for task '{task}': {folds}")
+        evaluate_all_folds(task, folds, args.output_dir, seed=args.seed)
+
