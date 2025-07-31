@@ -28,19 +28,41 @@ def load_data(task_name: str, fold: int):
     return X_train, y_train, X_test, y_test
 
 
-def save_metadata(metadata: dict, task: str, fold: int):
+def save_metadata(automl, task: str, fold: int):
     """
-    Saves a dictionary of metadata to a JSON file under ./out/metadata/{task}/fold_{fold}.json
+    Extracts and saves relevant metadata from the AutoML run to a JSON file.
 
     Args:
-        metadata (dict): Metadata dictionary to save
-        task (str): Name of the dataset
+        automl (AutoML): Trained AutoML instance
+        task (str): Task name
         fold (int): Fold number
     """
-    path = os.path.join("out", "metadata", task, f"fold_{fold}.json")
+    def make_serializable(d):
+        # Konvertiert alle numpy-Typen zu Python-Typen rekursiv
+        if isinstance(d, dict):
+            return {k: make_serializable(v) for k, v in d.items()}
+        elif isinstance(d, (np.integer, np.int64)):
+            return int(d)
+        elif isinstance(d, (np.floating, np.float64)):
+            return float(d)
+        elif isinstance(d, (np.ndarray, list, tuple)):
+            return [make_serializable(i) for i in d]
+        else:
+            return d
+
+    meta_features = getattr(automl.preprocessing, "meta_features_", {})
+    metadata = {
+        "task": task,
+        "fold": int(fold),
+        "models_used": list(automl.models.keys()) if hasattr(automl, "models") else [],
+        "meta_features": make_serializable(meta_features),
+    }
+
+    path = os.path.join("out", f"{task}_fold{fold}_metadata.json")
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
     with open(path, "w") as f:
         json.dump(metadata, f, indent=4)
 
     logger.info(f"Saved metadata to {path}")
+
