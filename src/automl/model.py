@@ -7,6 +7,8 @@ import logging
 from src.automl.preprocessing import Preprocessor
 from sklearn.metrics import r2_score
 from sklearn.model_selection import cross_val_score, KFold
+import numpy as np
+
 
 
 
@@ -78,10 +80,9 @@ class AutoML:
         return {"ridge": ridge, "lightgbm": lgb_model, "catboost": cat_model}
 
     def _evaluate(self, model, X, y):
-        """Evaluate model using KFold cross-validation and return mean R²."""
         cv = KFold(n_splits=5, shuffle=True, random_state=self.seed)
         scores = cross_val_score(model, X, y, cv=cv, scoring="r2", n_jobs=-1)
-        return scores.mean()
+        return np.mean(scores)
 
     def fit(self, X, y):
         logger.info("Fitting preprocessing...")
@@ -104,3 +105,15 @@ class AutoML:
     def predict(self, X):
         X_transformed = self.preprocessing.transform(X)
         return self.ensemble.predict(X_transformed)
+
+    def get_metadata(self):
+        # Konvertiere Meta-Features zu normalen Python-Typen
+        meta_features = {
+            k: int(v) if isinstance(v, (np.integer, np.int32, np.int64)) else float(v)
+            for k, v in getattr(self.preprocessing, "meta_features_", {}).items()
+        }
+
+        return {
+            "models": list(self.models.keys()),
+            "meta_features": meta_features,
+        }

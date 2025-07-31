@@ -1,67 +1,63 @@
+# run.py
 import argparse
-import os
 import logging
 import numpy as np
 import pandas as pd
+import os
+
 from src.automl.model import AutoML
 from src.automl.preprocessing import Preprocessor
+from src.automl.utils import load_data, save_metadata
 
+# Set up logging to display progress and debugging info
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def load_fold_data(task_dir, fold):
-    fold_dir = os.path.join(task_dir, str(fold))
-    X_train = pd.read_parquet(os.path.join(fold_dir, "X_train.parquet"))
-    y_train = pd.read_parquet(os.path.join(fold_dir, "y_train.parquet")).squeeze()
-    X_test = pd.read_parquet(os.path.join(fold_dir, "X_test.parquet"))
-    return X_train, y_train, X_test
+def main(task: str, fold: int, output_path: str, seed: int = 42):
+    """
+    Main function to train AutoML model and generate predictions for one specific fold.
 
+    Parameters:
+    - task: Name of the dataset (subfolder in /data)
+    - fold: Which outer fold (1-based index)
+    - output_path: Path to store the prediction file (e.g., 'out/preds.npy')
+    - seed: Random seed for reproducibility
+    """
+    logger.info(f"Running task '{task}', fold {fold}...")
 
-def detect_folds(task_dir):
-    """Returns list of fold indices (as int) if fold subdirectories exist"""
-    try:
-        fold_dirs = [
-            int(name) for name in os.listdir(task_dir)
-            if os.path.isdir(os.path.join(task_dir, name)) and name.isdigit()
-        ]
-        return sorted(fold_dirs)
-    except FileNotFoundError:
-        return []
+    # Load training and test data for the selected fold
+    X_train, y_train, X_test, y_test = load_data(task, fold)
 
+    # === PCA ACTIVATION ===
+    # Initialize preprocessing pipeline with PCA enabled (adjust variance if needed)
+    preprocessor = Preprocessor(use_pca=True, pca_variance=0.95)
 
-def main(task: str, fold: int, output_path: str):
-    task_path = os.path.join("data", task)
-    available_folds = detect_folds(task_path)
+    # Initialize AutoML system with preprocessing and random seed
+    automl = AutoML(preprocessing=preprocessor, seed=seed)
 
-    if not available_folds:
-        raise ValueError(f"No fold subdirectories found in {task_path}.")
-
-    if fold not in available_folds:
-        raise ValueError(f"Requested fold {fold}, but available folds are: {available_folds}")
-
-    logger.info(f"Using fold {fold} for task {task}")
-    X_train, y_train, X_test = load_fold_data(task_path, fold)
-
-    preprocessor = Preprocessor()
-    automl = AutoML(preprocessing=preprocessor, seed=42)
-
-    logger.info("Fitting AutoML...")
+    # Fit AutoML pipeline on training data
     automl.fit(X_train, y_train)
 
+    # Generate predictions for X_test
     logger.info("Generating predictions...")
     y_pred = automl.predict(X_test)
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    # Save predictions to the specified output path
     logger.info(f"Saving predictions to {output_path}")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     np.save(output_path, y_pred)
+
+    # Save metadata (e.g. model info, meta-features)
+    save_metadata(automl.get_metadata(), task, fold)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--task", type=str, required=True, help="Name of the dataset (subfolder in 'data/')")
-    parser.add_argument("--fold", type=int, required=True, help="Fold number (must exist as subfolder)")
-    parser.add_argument("--output-path", type=str, required=True, help="Path to save predictions (.npy)")
+    parser = argparse.ArgumentParser(description="Run AutoML on a single fold.")
+    parser.add_argument("--task", type=str, required=True, help="Name of dataset")
+    parser.add_argument("--fold", type=int, required=True, help="Fold number (starting from 1)")
+    parser.add_argument("--output-path", type=str, required=True, help="Path to save predictions")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
 
     args = parser.parse_args()
-    main(args.task, args.fold, args.output_path)
+    main(args.task, args.fold, args.output_path, seed=args.seed)
