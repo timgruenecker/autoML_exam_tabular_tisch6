@@ -16,8 +16,10 @@ from automl.automl import AutoML
 import argparse
 
 import logging
+import logging.handlers
 
-logger = logging.getLogger(__name__)
+logging.captureWarnings(True)
+logger = logging.getLogger("automl")
 
 FILE = Path(__file__).absolute().resolve()
 DATADIR = FILE.parent / "data"
@@ -26,11 +28,21 @@ DATADIR = FILE.parent / "data"
 def main(
     task: str,
     fold: int,
-    output_path: Path,
+    output_dir: Path,
     seed: int,
     datadir: Path,
 ):
     dataset = Dataset.load(datadir=datadir, task=task, fold=fold)
+
+    output_dir.mkdir(exist_ok=True)
+
+    handler = logging.handlers.RotatingFileHandler(
+        output_dir.joinpath("logs.log")
+    )
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.addHandler(logging.StreamHandler())
 
     logger.info("Fitting AutoML")
 
@@ -46,7 +58,8 @@ def main(
     # This will be used by github classrooms to get a performance
     # on the test set.
     logger.info("Writing predictions to disk")
-    with output_path.open("wb") as f:
+    res_path = output_dir.joinpath("preds.npy")
+    with res_path.open("wb+") as f:
         np.save(f, test_preds)
 
     if dataset.y_test is not None:
@@ -55,7 +68,6 @@ def main(
     else:
         # This is the setting for the exam dataset, you will not have access to y_test
         logger.info(f"No test set for task '{task}'")
-
 
 
 if __name__ == "__main__":
@@ -69,9 +81,9 @@ if __name__ == "__main__":
         choices=["bike_sharing_demand", "brazilian_houses", "superconductivity", "wine_quality", "yprop_4_1"]
     )
     parser.add_argument(
-        "--output-path",
+        "--output-dir",
         type=Path,
-        default=Path("data/bike_sharing_demand/1/predictions.npy"),
+        default=Path("data/bike_sharing_demand/"),
         help=(
             "The path to save the predictions to."
             " By default this will just save to './predictions.npy'."
@@ -127,7 +139,7 @@ if __name__ == "__main__":
     main(
         task=args.task,
         fold=args.fold,
-        output_path=args.output_path,
+        output_dir=args.output_dir,
         datadir=args.datadir,
         seed=args.seed,
     )
