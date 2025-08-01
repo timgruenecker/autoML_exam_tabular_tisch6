@@ -1,3 +1,4 @@
+# utils.py
 import pandas as pd
 import os
 import numpy as np
@@ -10,14 +11,14 @@ logger.setLevel(logging.INFO)
 
 def load_data(task_name: str, fold: int):
     """
-    Loads X_train, X_test, y_train, y_test from the specified dataset folder.
+    Loads data for a given task and fold.
 
     Args:
-        task_name (str): Name of the dataset (e.g. 'wine_quality')
-        fold (int): Fold number (starting at 1)
+        task_name (str): Name of the dataset (e.g., 'wine_quality')
+        fold (int): Fold number (starting from 1)
 
     Returns:
-        Tuple of pandas DataFrames: X_train, y_train, X_test, y_test
+        Tuple: (X_train, y_train, X_test, y_test)
     """
     base_path = os.path.join("data", task_name, str(fold))
     X_train = pd.read_parquet(os.path.join(base_path, "X_train.parquet"))
@@ -30,15 +31,15 @@ def load_data(task_name: str, fold: int):
 
 def save_metadata(automl, task: str, fold: int):
     """
-    Extracts and saves relevant metadata from the AutoML run to a JSON file.
+    Saves AutoML model metadata to a JSON file.
 
     Args:
         automl (AutoML): Trained AutoML instance
-        task (str): Task name
+        task (str): Dataset name
         fold (int): Fold number
     """
     def make_serializable(d):
-        # Konvertiert alle numpy-Typen zu Python-Typen rekursiv
+        """Convert NumPy types to Python native types recursively."""
         if isinstance(d, dict):
             return {k: make_serializable(v) for k, v in d.items()}
         elif isinstance(d, (np.integer, np.int64)):
@@ -65,4 +66,3 @@ def save_metadata(automl, task: str, fold: int):
         json.dump(metadata, f, indent=4)
 
     logger.info(f"Saved metadata to {path}")
-

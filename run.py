@@ -2,54 +2,52 @@
 import argparse
 import logging
 import numpy as np
-import pandas as pd
 import os
 
 from src.automl.model import AutoML
 from src.automl.preprocessing import Preprocessor
 from src.automl.utils import load_data, save_metadata
 
-# Set up logging to display progress and debugging info
+# Configure logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def main(task: str, fold: int, output_path: str, seed: int = 42):
     """
-    Main function to train AutoML model and generate predictions for one specific fold.
+    Entry point for running the AutoML system on a single fold.
 
-    Parameters:
-    - task: Name of the dataset (subfolder in /data)
-    - fold: Which outer fold (1-based index)
-    - output_path: Path to store the prediction file (e.g., 'out/preds.npy')
-    - seed: Random seed for reproducibility
+    Args:
+        task (str): Dataset name
+        fold (int): Fold index (starting from 1)
+        output_path (str): Path to save prediction output (NumPy file)
+        seed (int): Random seed
     """
     logger.info(f"Running task '{task}', fold {fold}...")
 
-    # Load training and test data for the selected fold
+    # Load training and test data
     X_train, y_train, X_test, y_test = load_data(task, fold)
 
-    # === PCA ACTIVATION ===
-    # Initialize preprocessing pipeline with PCA enabled (adjust variance if needed)
+    # Initialize preprocessing with PCA enabled
     preprocessor = Preprocessor(use_pca=True, pca_variance=0.95)
 
-    # Initialize AutoML system with preprocessing and random seed
+    # Initialize AutoML instance
     automl = AutoML(preprocessing=preprocessor, seed=seed)
 
-    # Fit AutoML pipeline on training data
+    # Fit model on training data
     automl.fit(X_train, y_train)
 
-    # Generate predictions for X_test
+    # Generate predictions
     logger.info("Generating predictions...")
     y_pred = automl.predict(X_test)
 
-    # Save predictions to the specified output path
+    # Save predictions
     logger.info(f"Saving predictions to {output_path}")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     np.save(output_path, y_pred)
 
-    # Save metadata (e.g. model info, meta-features)
-    save_metadata(automl.get_metadata(), task, fold)
+    # Save metadata
+    save_metadata(automl, task, fold)
 
 
 if __name__ == "__main__":
