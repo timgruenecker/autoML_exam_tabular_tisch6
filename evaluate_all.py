@@ -42,9 +42,12 @@ def evaluate_all_folds(task: str, folds: list[int], output_dir: str, seed: int =
         y_pred = automl.predict(X_test)
 
         # Compute R² score for this fold
-        r2 = r2_score(y_test, y_pred)
-        r2_scores.append(r2)
-        logger.info(f"Fold {fold}: R² score = {r2:.4f}")
+        if y_test is not None:
+            r2 = r2_score(y_test, y_pred)
+            r2_scores.append(r2)
+            logger.info(f"Fold {fold}: R² score = {r2:.4f}")
+        else:
+            logger.warning(f"No ground truth available for fold {fold}. Skipping R² computation.")
 
         # Save predictions to file
         os.makedirs(output_dir, exist_ok=True)
