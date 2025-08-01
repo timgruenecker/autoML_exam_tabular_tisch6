@@ -8,4 +8,8 @@ __pycache__
 automl-tabular-env
 
 # allow predictions.npy to be uploaded and allow eval results to be saved here
+data/
 !data/exam_dataset/1/*.npy
+
+*.pdf
+*.zip

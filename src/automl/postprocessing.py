@@ -50,15 +50,15 @@ class EnsembleModel:
         if not self.models:
             raise ValueError("No models in ensemble")
 
-        # Apply the same preprocessing pipeline as training
-        X_preprocessed = self.preprocessor.transform(X)
-        X_engineered = self.feature_engineer.transform(X_preprocessed)
-        X_selected = self.feature_selector.transform(X_engineered)
+        # # Apply the same preprocessing pipeline as training
+        # X_preprocessed = self.preprocessor.transform(X)
+        # X_engineered = self.feature_engineer.transform(X_preprocessed)
+        # X_selected = self.feature_selector.transform(X_engineered)
 
         # Generate predictions from all models
         predictions = []
         for model_config in self.models:
-            pred = model_config.model.predict(X_selected)
+            pred = model_config.model.predict(X)
             predictions.append(pred)
 
         predictions = np.array(predictions)
