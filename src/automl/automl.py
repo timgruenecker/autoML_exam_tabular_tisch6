@@ -123,12 +123,4 @@ class AutoML:
 
         X_test = self.pipeline.apply_preprocessing(X)
 
-        return self._model.predict(X_test)  # type: ignore
-
-
-# TODO: THINGS THAT DO NOT WORK !!!
-# - tokp results in negative r2 for brazilian houses
-# - more models / better model selection? xgboost?
-# - dehb for better usage of available time?
-
-# Next steps: debug through pipeline
+        return self._model.predict(X_test)
