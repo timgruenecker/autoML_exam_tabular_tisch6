@@ -13,3 +13,5 @@ data/
 
 *.pdf
 *.zip
+
+.vscode/

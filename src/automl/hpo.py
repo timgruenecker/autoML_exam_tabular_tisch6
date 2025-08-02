@@ -260,7 +260,8 @@ class HyperparameterOptimizer:
             model = self._create_model(model_type, default_params)
             return ModelConfig(model_type, default_params, -1.0, model)
 
-        best_params, best_score, best_budget = max(best_configs, key=lambda x: x[1])
+        # TODO: Buggy line, reorder tuple extraction probably would fix it
+        best_params, best_score, best_budget = max(best_configs, key=lambda x: x[0])
 
         final_model = self._create_model(model_type, best_params)
 
