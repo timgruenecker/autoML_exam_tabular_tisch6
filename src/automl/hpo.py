@@ -148,11 +148,23 @@ class HyperparameterOptimizer:
             )
 
         elif model_type == 'xgboost':
-            return xgb.XGBRegressor(
-                random_state=self.seed,
-                verbosity=0,
-                **params
-            )
+            try:
+                model = xgb.XGBRegressor(
+                    tree_method="gpu_hist",
+                    predictor="gpu_predictor",
+                    random_state=self.seed,
+                    verbosity=0,
+                    **params
+                )
+            except:
+                model = xgb.XGBRegressor(
+                    tree_method="hist",
+                    predictor="auto",
+                    random_state=self.seed,
+                    verbosity=0,
+                    **params
+                )
+            return model
 
         elif model_type == 'random_forest':
             from sklearn.ensemble import RandomForestRegressor
@@ -260,8 +272,9 @@ class HyperparameterOptimizer:
             model = self._create_model(model_type, default_params)
             return ModelConfig(model_type, default_params, -1.0, model)
 
-        # TODO: Buggy line, reorder tuple extraction probably would fix it
-        best_params, best_score, best_budget = max(best_configs, key=lambda x: x[0])
+        # # TODO: Buggy line, reorder tuple extraction probably would fix it
+        # best_configs = sorted(best_configs, key=lambda x: x[0], reverse=True)
+        best_score, best_params, best_budget = max(best_configs, key=lambda x: x[0])
 
         final_model = self._create_model(model_type, best_params)
 
