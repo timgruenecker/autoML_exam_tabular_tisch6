@@ -91,7 +91,7 @@ class EnsembleModel:
         for i, model_config in enumerate(self.models):
             try:
                 pred = model_config.model.predict(X)
-                if np.any(np.isnan(pred) or np.isinf(pred)):
+                if np.any(np.isnan(pred)) or np.any(np.isinf(pred)):
                     logger.warning(f"Model {model_config.model_type} produced invalid predictions")
                     continue
 
