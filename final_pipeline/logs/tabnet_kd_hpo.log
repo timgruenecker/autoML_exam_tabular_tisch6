@@ -84,3 +84,4 @@
 2025-08-05 13:04:15 | Trial 3 mean R² = 0.89004
 2025-08-05 13:04:15 | Trial 4 params: {'n_d': 48, 'n_a': 32, 'n_steps': 3, 'gamma': 1.1215089703802876, 'lambda_sparse': 2.193048555664367e-07, 'lr': 0.002092244700123591, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 180, 'patience': 30}
 2025-08-05 13:09:09 | Trial 4 pruned at fold 1
+2025-08-05 13:09:09 | Trial 5 params: {'n_d': 56, 'n_a': 40, 'n_steps': 3, 'gamma': 1.0195344228012768, 'lambda_sparse': 2.335963502626159e-06, 'lr': 0.0027134954578507987, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 140, 'patience': 25}
