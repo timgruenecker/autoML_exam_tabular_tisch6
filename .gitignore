@@ -1,23 +1,30 @@
-# =============== Ignore alles ===============
+# =============== Ignoriere alles ===============
 *
 
-# =============== Nur folgende AUSNAHMEN NICHT ignorieren ===============
-# 1. Behalte den final_pipeline-Ordner (außer catboost_info & catboost_tmp)
+# =============== AUSNAHMEN (NICHT ignorieren) ===============
+# 1. Behalte den final_pipeline-Ordner (inkl. Unterordner)
 !final_pipeline/
 !final_pipeline/**
-final_pipeline/catboost_info/
-final_pipeline/catboost_tmp/
-final_pipeline/catboost_info/**
-final_pipeline/catboost_tmp/**
 
-# 2. Behalte den Data-Ordner NUR für exam_dataset/1 inkl. Unterordner/Dateien
+# 2. Behalte data/exam_dataset/1 und alles darunter
 !data/
 !data/exam_dataset/
 !data/exam_dataset/1/
 !data/exam_dataset/1/**
 
-# 3. Behalte .gitignore
-!.gitignore
+# 3. Behalte die .gitignore selbst
+.gitignore
+
+# =============== Jetzt AUSNAHMEN VON DEN AUSNAHMEN (wieder ignorieren) ===============
+# -> Diese Ordner wieder ignorieren, auch wenn sie oben per ! eingeschlossen sind
+final_pipeline/catboost_info/
+final_pipeline/catboost_info/**
+final_pipeline/catboost_tmp/
+final_pipeline/catboost_tmp/**
+
+# =============== Spezielle Dateien ignorieren ===============
+fast_notes.md
+run.py
 
 # =============== Sonstige Standard-Patterns ===============
 .venv/
