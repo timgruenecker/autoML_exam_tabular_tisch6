@@ -131,7 +131,7 @@ def make_objective(X, y, y_distill):
                 optimizer_params={"lr": params["lr"]},
                 mask_type=params["mask_type"],
                 n_shared=params["n_shared"], n_independent=params["n_independent"],
-                device_name="cuda" if torch.cuda.is_available() else "cpu", verbose=0
+                device_name="cuda" if torch.cuda.is_available() else "cpu", verbose=0, seed=42
             )
             model.fit(
                 X_tr, y_tr,
@@ -201,6 +201,7 @@ if __name__ == "__main__":
             optimizer_fn=torch.optim.Adam,
             optimizer_params={"lr": study.best_params["lr"]},
             device_name="cuda" if torch.cuda.is_available() else "cpu",
+            seed=42,
             verbose=0
         )
         mdl.fit(
