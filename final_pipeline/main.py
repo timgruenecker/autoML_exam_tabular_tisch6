@@ -200,7 +200,7 @@ def main():
     }
 
     hpo_script = hpo_scripts.get(best_model)
-    if False:
+    if hpo_script is not None:
         print(f"\nLaunching HPO for {best_model} via {hpo_script}...")
         subprocess.run(["python", hpo_script], check=True)
     else:
@@ -211,8 +211,8 @@ def main():
     compare_and_select_best_oof(best_model, y)
 
     # 6. Launch knowledge distillation with TabNet
-    # print(f"\nLaunching Knowledge Distillation (kd_tabnet.py)...")
-    # subprocess.run(["python", "kd_tabnet.py"], check=True)
+    print(f"\nLaunching Knowledge Distillation (kd_tabnet.py)...")
+    subprocess.run(["python", "kd_tabnet.py"], check=True)
 
     # 7. Launch ensembling step
     print(f"\nLaunching ensembling step (ensembling.py)...")
