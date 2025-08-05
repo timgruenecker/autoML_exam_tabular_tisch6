@@ -42,7 +42,7 @@ def get_param_space(bounds=None):
     if bounds is None:
         bounds = {}
     space = {
-        "iterations": ("int", bounds.get("iterations", (1500, 3500))),
+        "iterations": ("int", bounds.get("iterations", (2000, 3000))),
         "learning_rate": ("float", bounds.get("learning_rate", (0.01, 0.07))),
         "depth": ("int", bounds.get("depth", (4, 8))),
         "l2_leaf_reg": ("float", bounds.get("l2_leaf_reg", (1e-7, 1e-2))),
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     print("\n[CatBoost HPO] Starting CatBoost hyperparameter optimization...")
     staged_hpo([
         # (phase name, seconds, top-fraction for shrinking)
-        ("Phase 1", 80*60, 0.3),   # 80 min, shrink to top 30%
+        ("Phase 1", 80*60, 0.15),   # 80 min, shrink to top 15%
         ("Phase 2", 30*60, 0.05),   # 30 min, shrink to top 5%
         ("Phase 3", 10*60, None)    # 10 min, no further shrink
     ], timeout=2*60*60)  # Total timeout: 2 hours

@@ -162,7 +162,7 @@ def compare_and_select_best_oof(model_name: str, y_true):
     score_hpo = r2_score(y_true, oof_hpo)
 
     if score_hpo > score_base:
-        print(f"⚡️ HPO for {model_name} is better ({score_hpo:.5f} > {score_base:.5f}), using HPO result.")
+        print(f"HPO for {model_name} is better ({score_hpo:.5f} > {score_base:.5f}), using HPO result.")
         shutil.copy(hpo_path, final_path)
     else:
         print(f"Baseline for {model_name} is better ({score_base:.5f} >= {score_hpo:.5f}), using baseline result.")
@@ -218,7 +218,7 @@ def main():
     print(f"\nLaunching ensembling step (ensembling.py)...")
     subprocess.run(["python", "ensembling.py"], check=True)
 
-    print(f"\nThe submission CSV has been generated and the entire pipeline is now complete.")
+    print(f"\nThe predictions.npy has been generated and the entire pipeline is now complete.")
 
 if __name__ == "__main__":
     main()

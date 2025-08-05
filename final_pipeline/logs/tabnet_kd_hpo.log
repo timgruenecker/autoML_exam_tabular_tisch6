@@ -1,0 +1,9 @@
+2025-08-05 18:36:55 | Trial 0 params: {'n_d': 40, 'n_a': 56, 'n_steps': 3, 'gamma': 1.146398788362281, 'lambda_sparse': 1.5751320499779714e-06, 'lr': 0.0022284160938590546, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 140, 'patience': 20}
+2025-08-05 18:41:53 | Trial 0 mean R2 = 0.85318
+2025-08-05 18:41:53 | Trial 1 params: {'n_d': 56, 'n_a': 48, 'n_steps': 3, 'gamma': 1.141614515559209, 'lambda_sparse': 1.0994335574766202e-07, 'lr': 0.003917436398866858, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 180, 'patience': 20}
+2025-08-05 18:47:04 | Trial 1 mean R2 = 0.88964
+2025-08-05 18:47:04 | Trial 2 params: {'n_d': 32, 'n_a': 32, 'n_steps': 3, 'gamma': 1.0608484485919076, 'lambda_sparse': 1.120760621186055e-06, 'lr': 0.002698102241576292, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 140, 'patience': 25}
+2025-08-05 18:51:27 | Trial 2 mean R2 = 0.83185
+2025-08-05 18:51:27 | Trial 3 params: {'n_d': 32, 'n_a': 40, 'n_steps': 3, 'gamma': 1.0732723686587384, 'lambda_sparse': 8.168455894760157e-07, 'lr': 0.0034466049857780254, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 140, 'patience': 25}
+2025-08-05 18:56:18 | Trial 3 mean R2 = 0.89744
+2025-08-05 18:56:18 | Trial 4 params: {'n_d': 48, 'n_a': 32, 'n_steps': 3, 'gamma': 1.1215089703802876, 'lambda_sparse': 2.193048555664367e-07, 'lr': 0.002092244700123591, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 180, 'patience': 30}
