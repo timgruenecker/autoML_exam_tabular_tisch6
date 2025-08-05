@@ -1,0 +1,7 @@
+{
+  "baseline_oof": {
+    "model": "catboost",
+    "r2": 0.9393366917560232
+  },
+  "best_ensemble_oof": null
+}

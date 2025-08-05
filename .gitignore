@@ -1,11 +1,28 @@
-.venv
+# =============== Ignore alles ===============
+*
+
+# =============== Nur folgende AUSNAHMEN NICHT ignorieren ===============
+# 1. Behalte den final_pipeline-Ordner (außer catboost_info & catboost_tmp)
+!final_pipeline/
+!final_pipeline/**
+final_pipeline/catboost_info/
+final_pipeline/catboost_tmp/
+final_pipeline/catboost_info/**
+final_pipeline/catboost_tmp/**
+
+# 2. Behalte den Data-Ordner NUR für exam_dataset/1 inkl. Unterordner/Dateien
+!data/
+!data/exam_dataset/
+!data/exam_dataset/1/
+!data/exam_dataset/1/**
+
+# 3. Behalte .gitignore
+!.gitignore
+
+# =============== Sonstige Standard-Patterns ===============
+.venv/
+__pycache__/
+*.egg-info
 *.npy
 *.parquet
-*.egg-info
-__pycache__
-
-# TODO: add/edit your venv folder name here (if you use venv)
-automl-tabular-env
-
-# allow predictions.npy to be uploaded and allow eval results to be saved here
-!data/exam_dataset/1/*.npy
+automl-tabular-env/

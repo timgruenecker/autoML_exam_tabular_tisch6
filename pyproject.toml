@@ -1,13 +1,25 @@
 [project]
 name = "automl"
-license = { file = "LICENSE" }
-# Feel free to change from here
-version = "0.1.0"
-dependencies = ["scikit-learn", "openml", "pandas", "numpy<2.0", "IPython"]
-requires-python = ">=3.10"
-authors = [{ name = "user", email = "user@user.com" }]
-readme = "README.md"
+version = "1.0.0"
 description = "AutoML SS25 Exam - Tabular"
+authors = [{ name = "user", email = "user@user.com" }]
+license = { file = "LICENSE" }
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+  "pandas==2.3.0",
+  "numpy==1.26.2",
+  "scikit-learn==1.4.1.post1",
+  "xgboost==3.0.2",
+  "lightgbm==4.6.0",
+  "catboost==1.2.8",
+  "optuna==4.4.0",
+  "pyarrow==20.0.0",
+  "torch==2.7.1",
+  "pytorch-tabnet==4.1.0"
+]
+
 classifiers = [
   'Intended Audience :: Science/Research',
   'Intended Audience :: Developers',
