@@ -74,3 +74,13 @@
 2025-08-05 05:54:57 | Trial 36 pruned at fold 1
 2025-08-05 05:54:57 | Trial 37 params: {'n_d': 48, 'n_a': 32, 'n_steps': 3, 'gamma': 1.0280062984675669, 'lambda_sparse': 1.9905571808296123e-07, 'lr': 0.003840900545998047, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 180, 'patience': 30}
 2025-08-05 06:01:12 | Trial 37 mean R² = 0.90074
+2025-08-05 12:42:19 | Trial 0 params: {'n_d': 40, 'n_a': 56, 'n_steps': 3, 'gamma': 1.146398788362281, 'lambda_sparse': 1.5751320499779714e-06, 'lr': 0.0022284160938590546, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 140, 'patience': 20}
+2025-08-05 12:47:32 | Trial 0 mean R² = 0.87024
+2025-08-05 12:47:32 | Trial 1 params: {'n_d': 56, 'n_a': 48, 'n_steps': 3, 'gamma': 1.141614515559209, 'lambda_sparse': 1.0994335574766202e-07, 'lr': 0.003917436398866858, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 180, 'patience': 20}
+2025-08-05 12:54:54 | Trial 1 mean R² = 0.89839
+2025-08-05 12:54:54 | Trial 2 params: {'n_d': 32, 'n_a': 32, 'n_steps': 3, 'gamma': 1.0608484485919076, 'lambda_sparse': 1.120760621186055e-06, 'lr': 0.002698102241576292, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 140, 'patience': 25}
+2025-08-05 12:58:21 | Trial 2 pruned at fold 1
+2025-08-05 12:58:21 | Trial 3 params: {'n_d': 32, 'n_a': 40, 'n_steps': 3, 'gamma': 1.0732723686587384, 'lambda_sparse': 8.168455894760157e-07, 'lr': 0.0034466049857780254, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 140, 'patience': 25}
+2025-08-05 13:04:15 | Trial 3 mean R² = 0.89004
+2025-08-05 13:04:15 | Trial 4 params: {'n_d': 48, 'n_a': 32, 'n_steps': 3, 'gamma': 1.1215089703802876, 'lambda_sparse': 2.193048555664367e-07, 'lr': 0.002092244700123591, 'mask_type': 'sparsemax', 'batch_size': 512, 'virtual_batch_size': 128, 'n_shared': 1, 'n_independent': 2, 'max_epochs': 180, 'patience': 30}
+2025-08-05 13:09:09 | Trial 4 pruned at fold 1

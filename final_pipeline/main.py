@@ -74,7 +74,7 @@ def cast_categories(X: pd.DataFrame, categorical_cols: list):
 def run_oof_predictions(X, y, categorical_cols, models, cv):
     """
     Compute and save OOF (out-of-fold) predictions for all base models.
-    Results (R² per fold, mean/std, and full OOF vector) are saved for each model.
+    Results (R2 per fold, mean/std, and full OOF vector) are saved for each model.
     """
     oof_scores = {}
     OOF_DIR.mkdir(parents=True, exist_ok=True)
@@ -121,11 +121,11 @@ def run_oof_predictions(X, y, categorical_cols, models, cv):
             oof_pred[va_idx] = preds
             fold_score = r2_score(y.iloc[va_idx], preds)
             fold_scores.append(fold_score)
-            print(f"R² = {fold_score:.4f}")
+            print(f"R2 = {fold_score:.4f}")
 
         mean_score = np.mean(fold_scores)
         std_score = np.std(fold_scores)
-        print(f"OOF {name}: R² mean = {mean_score:.4f} ± {std_score:.4f}")
+        print(f"OOF {name}: R2 mean = {mean_score:.4f} ± {std_score:.4f}")
 
         oof_scores[name] = {"mean": mean_score, "std": std_score}
 
@@ -140,7 +140,7 @@ def compare_and_select_best_oof(model_name: str, y_true):
     """
     Compares baseline OOF and HPO OOF for a given model,
     selects the best one as oof_<model>_final.parquet and removes unused files.
-    Returns R² of both for reporting.
+    Returns R2 of both for reporting.
     """
     base_path = OOF_DIR / f"oof_{model_name.lower()}.parquet"
     hpo_path = OOF_DIR / f"oof_{model_name.lower()}_hpo.parquet"
@@ -187,9 +187,9 @@ def main():
     # 2. Compute OOF predictions for all models
     oof_scores = run_oof_predictions(X, y, categorical_cols, models, cv)
 
-    # 3. Select the best baseline model (highest mean OOF R²)
+    # 3. Select the best baseline model (highest mean OOF R2)
     best_model = max(oof_scores.items(), key=lambda x: x[1]["mean"])[0]
-    print(f"\nBest baseline model (highest mean OOF R²): {best_model}")
+    print(f"\nBest baseline model (highest mean OOF R2): {best_model}")
 
     # 4. Run HPO for the best model (if script is available)
     hpo_scripts = {

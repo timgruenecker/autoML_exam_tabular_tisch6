@@ -1,11 +1,11 @@
 {
-  "best_score": 0.9392727474235087,
+  "best_score": 0.9388780564688461,
   "best_params": {
-    "iterations": 2507,
-    "learning_rate": 0.042055835483358055,
-    "depth": 5,
-    "l2_leaf_reg": 0.0005310523585471658,
-    "bagging_temperature": 0.1614067075072963,
-    "random_strength": 2.7607900871771416
+    "iterations": 3321,
+    "learning_rate": 0.03951243812275787,
+    "depth": 6,
+    "l2_leaf_reg": 0.00028908906030020794,
+    "bagging_temperature": 0.150089839491187,
+    "random_strength": 2.270744693172978
   }
 }

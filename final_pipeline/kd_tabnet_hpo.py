@@ -99,7 +99,7 @@ def load_data_and_kd():
 # === OPTUNA OBJECTIVE FOR TABNET-KD ===
 def make_objective(X, y, y_distill):
     """
-    Returns an Optuna objective that trains TabNet with KD targets and reports mean R² across folds.
+    Returns an Optuna objective that trains TabNet with KD targets and reports mean R2 across folds.
     """
     def objective(trial):
         params = {
@@ -155,7 +155,7 @@ def make_objective(X, y, y_distill):
                 logger.info(f"Trial {trial.number} pruned at fold {fold}")
                 raise optuna.TrialPruned()
         mean_score = np.mean(scores)
-        logger.info(f"Trial {trial.number} mean R² = {mean_score:.5f}")
+        logger.info(f"Trial {trial.number} mean R2 = {mean_score:.5f}")
         return mean_score
     return objective
 
@@ -174,7 +174,7 @@ if __name__ == "__main__":
 
     # Output best results
     print("\n[TabNet KD HPO] === Best results ===")
-    print(f"[TabNet KD HPO] Best mean R²: {study.best_value:.5f}")
+    print(f"[TabNet KD HPO] Best mean R2: {study.best_value:.5f}")
     print("[TabNet KD HPO] Best Params:")
     for k, v in study.best_params.items():
         print(f"   {k}: {v}")
@@ -220,7 +220,7 @@ if __name__ == "__main__":
         oof_pred[va] = preds
 
     global_r2 = r2_score(y, oof_pred)
-    print(f"[TabNet KD HPO] Final global OOF R²: {global_r2:.5f}")
+    print(f"[TabNet KD HPO] Final global OOF R2: {global_r2:.5f}")
 
     OOF_DIR.mkdir(parents=True, exist_ok=True)
     pd.DataFrame({"oof_tabnet_kd_hpo": oof_pred}, index=np.arange(len(y))).to_parquet(OOF_DIR / "oof_tabnet_kd_hpo.parquet")

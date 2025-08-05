@@ -178,8 +178,8 @@ if __name__ == "__main__":
     print("\n[CatBoost HPO] Starting CatBoost hyperparameter optimization...")
     staged_hpo([
         # (phase name, seconds, top-fraction for shrinking)
-        ("Phase 1", 70*60, 0.40),   # 70 min, shrink to top 40%
-        ("Phase 2", 40*60, 0.15),   # 40 min, shrink to top 15%
+        ("Phase 1", 80*60, 0.3),   # 80 min, shrink to top 30%
+        ("Phase 2", 30*60, 0.05),   # 30 min, shrink to top 5%
         ("Phase 3", 10*60, None)    # 10 min, no further shrink
     ], timeout=2*60*60)  # Total timeout: 2 hours
     print("[CatBoost HPO] CatBoost HPO complete.")
@@ -211,9 +211,9 @@ if __name__ == "__main__":
         )
         oof_pred[va_idx] = model.predict(X.iloc[va_idx])
 
-    # Calculate OOF R² score for all data
+    # Calculate OOF R2 score for all data
     oof_score = r2_score(y, oof_pred)
-    print(f"[CatBoost HPO] Final OOF R² across all folds: {oof_score:.5f}")
+    print(f"[CatBoost HPO] Final OOF R2 across all folds: {oof_score:.5f}")
 
     OOF_DIR.mkdir(parents=True, exist_ok=True)
     df_oof = pd.DataFrame({"oof_catboost_hpo": oof_pred}, index=X.index)

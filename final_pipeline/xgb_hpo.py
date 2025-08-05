@@ -198,10 +198,11 @@ if __name__ == "__main__":
     # === Start staged Optuna HPO ===
     print("\n[XGBoost HPO] Starting XGBoost hyperparameter optimization...")
     staged_hpo([
-        ("Phase 1", 70*60, 0.40),   # 70 min, shrink to top 40%
-        ("Phase 2", 40*60, 0.15),   # 40 min, shrink to top 15%
+        # (phase name, seconds, top-fraction for shrinking)
+        ("Phase 1", 80*60, 0.3),   # 80 min, shrink to top 30%
+        ("Phase 2", 30*60, 0.05),   # 30 min, shrink to top 5%
         ("Phase 3", 10*60, None)    # 10 min, no further shrink
-    ], timeout=2*60*60)
+    ], timeout=2*60*60)  # Total timeout: 2 hours
     print("[XGBoost HPO] XGBoost HPO complete.")
 
     # === FINAL OOF PREDICTIONS WITH BEST PARAMS ===
@@ -237,7 +238,7 @@ if __name__ == "__main__":
         pred = model.predict(X.iloc[va_idx])
         oof_pred[va_idx] = pred
         score = r2_score(y.iloc[va_idx], pred)
-        print(f"  R² = {score:.5f}")
+        print(f"  R2 = {score:.5f}")
 
     # Store OOF predictions to disk for later ensembling
     OOF_DIR.mkdir(parents=True, exist_ok=True)

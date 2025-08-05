@@ -18,7 +18,7 @@ DATA_DIR             = Path("../data/exam_dataset/1")
 OOF_DIR              = Path("results/oof")
 RESULTS_DIR          = Path("results")
 ENSEMBLE_RESULT_FILE = RESULTS_DIR / "ensemble_eval.json"
-SUBMISSION_FILE      = RESULTS_DIR / "submission.csv"
+PREDICTION_FILE      = Path("../data/exam_dataset/predictions.npy")
 
 MODEL_NAMES = [
     "catboost", "lightgbm", "xgboost",
@@ -53,7 +53,7 @@ for name in MODEL_NAMES:
     oof_preds_list.append(df[col].values)
 oof_preds = np.column_stack(oof_preds_list)
 
-# ——— Find the best baseline (single model) using OOF R² —————————————————————————
+# ——— Find the best baseline (single model) using OOF R2 —————————————————————————
 best_base_score = -np.inf
 best_base_name  = None
 for name in MODEL_NAMES:
@@ -64,7 +64,7 @@ for name in MODEL_NAMES:
         if r2 > best_base_score:
             best_base_score = r2
             best_base_name  = name
-print(f"[Baseline OOF] Best model: {best_base_name} with R² = {best_base_score:.5f}")
+print(f"[Baseline OOF] Best model: {best_base_name} with R2 = {best_base_score:.5f}")
 
 # ——— Evaluate stacking candidates via OOF-CV for all model combinations ————————
 from sklearn.model_selection import KFold
@@ -96,7 +96,7 @@ for combo in all_combos:
             m.fit(Xm[tr], y_train_full[tr])
             meta_oof[va] = m.predict(Xm[va])
         score = r2_score(y_train_full, meta_oof)
-        print(f"  {meta_name} → R² (OOF-CV) = {score:.5f}")
+        print(f"  {meta_name} → R2 (OOF-CV) = {score:.5f}")
         m_final = spec["class"](**spec["params"])
         m_final.fit(Xm, y_train_full)
         results[meta_name][combo] = {
@@ -226,20 +226,17 @@ def get_base_model_preds(names):
 # ——— Fit all base models once and predict on train/test for ensembling ————————
 _, test_preds_all = get_base_model_preds(MODEL_NAMES)
 
-# ——— Predict and create submission based on best ensemble (or fallback baseline) —— 
+# ——— Predict and create predictions.npy based on best ensemble (or fallback baseline) —— 
 if best_ensemble_info is not None:
     combo       = best_ensemble_info["combo"]
     names_str   = ", ".join(best_ensemble_info["models"])
     X_test_meta = test_preds_all[:, combo]
     y_pred_ens  = best_ensemble_model.predict(X_test_meta)
-    print(f"\nBest Ensemble on Testset: Combo ({names_str}) → R² OOF-CV = {best_ensemble_score:.5f}")
+    print(f"\nBest Ensemble on Testset: Combo ({names_str}) → R2 OOF-CV = {best_ensemble_score:.5f}")
 
-    submission = pd.DataFrame({
-        "Id": np.arange(len(y_pred_ens)),
-        "SALE_PRC": y_pred_ens
-    })
-    submission.to_csv(SUBMISSION_FILE, index=False)
-    print(f"[Submission] Saved ensemble predictions to {SUBMISSION_FILE}")
+    # SAVE AS .npy FOR EXAM SUBMISSION
+    np.save(PREDICTION_FILE, y_pred_ens)
+    print(f"[Submission] Saved ensemble predictions to {PREDICTION_FILE}")
 
 else:
     print(f"\nNo ensemble beat the baseline on OOF; using baseline {best_base_name}.")
@@ -279,12 +276,9 @@ else:
         y_pred_ens = m.predict(Xte)
     else:
         raise ValueError(f"Unknown model: {best_base_name}")
-
-    submission = pd.DataFrame({
-        "Id": np.arange(len(y_pred_ens)),
-        "SALE_PRC": y_pred_ens
-    })
-    submission.to_csv(SUBMISSION_FILE, index=False)
-    print(f"[Submission] Saved baseline predictions to {SUBMISSION_FILE}")
+    
+      # SAVE AS .npy FOR EXAM SUBMISSION
+    np.save(PREDICTION_FILE, y_pred_ens)
+    print(f"[Submission] Saved baseline predictions to {PREDICTION_FILE}")
 
 print(f"\nDetails: {ENSEMBLE_RESULT_FILE}")
