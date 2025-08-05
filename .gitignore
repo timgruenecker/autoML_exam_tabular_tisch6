@@ -12,8 +12,8 @@
 !data/exam_dataset/1/
 !data/exam_dataset/1/**
 
-# 3. Behalte die .gitignore selbst
-.gitignore
+
+!.gitignore
 
 # =============== Jetzt AUSNAHMEN VON DEN AUSNAHMEN (wieder ignorieren) ===============
 # -> Diese Ordner wieder ignorieren, auch wenn sie oben per ! eingeschlossen sind
