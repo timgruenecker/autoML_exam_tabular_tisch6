@@ -114,7 +114,7 @@ def make_objective(X, y, y_distill):
             "virtual_batch_size": 128,
             "n_shared": 1,
             "n_independent": 2,
-            "max_epochs": trial.suggest_int("max_epochs", 140, 180, step=20),
+            "max_epochs": trial.suggest_int("max_epochs", 140, 180, step=20), # Use low epoch count for training, assuming more epochs in the final 5Fold OOF-CV will have a better performance
             "patience": trial.suggest_int("patience", 20, 30, step=5),
         }
         logger.info(f"Trial {trial.number} params: {params}")
@@ -208,7 +208,7 @@ if __name__ == "__main__":
             eval_set=[(X_tab[va], y_distill[va])],
             eval_name=["val"],
             eval_metric=["rmse"],
-            max_epochs=350, # 350 epochs hardcoded, as it was a good avg for all datasets (maybe needs further adjustment when testing on huge datasets)
+            max_epochs=350, # Use more epochs during OOF-CV to ensure each fold model fully converges. (maybe needs further adjustment when testing on huge datasets)
             patience=150,
             batch_size=512,
             virtual_batch_size=128,

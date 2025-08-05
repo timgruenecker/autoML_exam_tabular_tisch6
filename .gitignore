@@ -1,0 +1,32 @@
+# =============== Ignoriere alles ===============
+*
+
+# =============== AUSNAHMEN (NICHT ignorieren) ===============
+!.gitignore
+
+!final_pipeline/
+!final_pipeline/**
+
+!data/
+!data/exam_dataset/
+!data/exam_dataset/1/
+!data/exam_dataset/1/**
+
+# =============== Jetzt UNTERAUSNAHMEN (spezifische Dateien trotzdem ignorieren) ===============
+
+# Diese Dateien trotzdem ignorieren, obwohl die Elternordner oben als Ausnahme markiert sind:
+final_pipeline/catboost_info/
+final_pipeline/catboost_info/**
+final_pipeline/catboost_tmp/
+final_pipeline/catboost_tmp/**
+final_pipeline/fast_notes.md
+final_pipeline/run.py
+illegal_eval.py
+
+# =============== Sonstige Standard-Patterns ===============
+.venv/
+__pycache__/
+*.egg-info
+*.npy
+*.parquet
+automl-tabular-env/

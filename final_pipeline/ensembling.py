@@ -211,7 +211,7 @@ def get_base_model_preds(names):
                 Xtr_np, y_dist,
                 eval_set=[(Xtr_np, y_dist)], eval_name=["train"],
                 eval_metric=["rmse"],
-                max_epochs=180, patience=150, # 350 epochs hardcoded, as it was a good avg for all datasets (maybe needs further adjustment when testing on huge datasets)
+                max_epochs=180, patience=0, # Use fewer epochs for final training to reduce overfitting on the full dataset. 
                 batch_size=512, virtual_batch_size=128,
                 num_workers=0, drop_last=False
             )

@@ -212,7 +212,7 @@ def main():
 
     # 6. Launch knowledge distillation with TabNet
     print(f"\nLaunching Knowledge Distillation (kd_tabnet.py)...")
-    subprocess.run(["python", "kd_tabnet.py"], check=True)
+    subprocess.run(["python", "kd_tabnet_hpo.py"], check=True)
 
     # 7. Launch ensembling step
     print(f"\nLaunching ensembling step (ensembling.py)...")
