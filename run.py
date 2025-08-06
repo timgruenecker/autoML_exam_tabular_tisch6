@@ -39,7 +39,7 @@ def main(
     handler = logging.handlers.RotatingFileHandler(
         output_dir.joinpath("logs.log")
     )
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s |> %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.removeHandler(logging.StreamHandler())
@@ -78,7 +78,7 @@ if __name__ == "__main__":
         type=str,
         required=True,
         help="The name of the task to run on.",
-        choices=["bike_sharing_demand", "brazilian_houses", "superconductivity", "wine_quality", "yprop_4_1"]
+        choices=["bike_sharing_demand", "brazilian_houses", "superconductivity", "wine_quality", "yprop_4_1", "exam_dataset"]
     )
     parser.add_argument(
         "--output-dir",

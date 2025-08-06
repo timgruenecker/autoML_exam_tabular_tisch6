@@ -66,6 +66,7 @@ class Preprocessor:
         X_corrected = self._handle_missing_values(X)
 
         self.preprocessor = self._create_preprocessor()
+
         X_transformed = self.preprocessor.fit_transform(X_corrected)
 
         if hasattr(self.preprocessor, 'get_feature_names_out'):

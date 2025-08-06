@@ -57,7 +57,7 @@ class Pipeline:
         X_sel = self.feature_selector.select_features(X_eng, Y)
 
         return train_test_split(
-            X_sel,
+            X_prepr,
             Y,
             random_state=self.seed,
             test_size=val_set_size,
@@ -65,8 +65,9 @@ class Pipeline:
 
     def apply_preprocessing(self, X: pd.DataFrame):
         X_prepr = self.preprocessor.transform(X)
-        X_eng = self.feature_engineer.transform(X_prepr)
-        return self.feature_selector.transform(X_eng)
+        # X_eng = self.feature_engineer.transform(X_prepr)
+        # return self.feature_selector.transform(X_eng)
+        return X_prepr
 
     def run(self, X: pd.DataFrame, Y) -> Model:
         logger.info("Starting AutoML pipeline ...")
@@ -102,6 +103,7 @@ class Pipeline:
         return ensemble
 
     def log_step(self, step: int, msg: str):
+        print("")
         logger.info("-------------------------------------------------------")
         logger.info(f"Step {step}: {msg}")
 

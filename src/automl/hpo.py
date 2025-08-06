@@ -324,6 +324,7 @@ class HyperparameterOptimizer:
 
     def _optimize_with_dehb(self, X: pd.DataFrame, y: pd.Series, model_type: str) -> ModelConfig:
         """Optimize using DEHB with ConfigSpace."""
+        print("")
         logger.info(f"Optimizing {model_type} with DEHB and ConfigSpace...")
 
         # Get configuration space
@@ -340,7 +341,8 @@ class HyperparameterOptimizer:
             max_fidelity=self.max_budget,
             eta=self.eta,
             output_path="./data/output/tmp/dehb_runs/",
-            n_workers=1
+            n_workers=1,
+            seed=self.seed
         )
 
         # Calculate budget allocation
@@ -353,13 +355,12 @@ class HyperparameterOptimizer:
             # Run DEHB optimization
             traj, runtime, history = dehb_optimizer.run(
                 # total_cost=self.time_budget,
-                fevals=self.n_trials,
-                verbose=False,
+                fevals=max_iterations,
                 reset=True,
                 seed=self.seed
             )
 
-            # logger.info(f"History: {history}")
+            logger.info(f"History: {history}")
             # logger.info(f"Trajectory: {traj}")
             # logger.info(f"Runtime: {runtime:.2f} seconds")
 
